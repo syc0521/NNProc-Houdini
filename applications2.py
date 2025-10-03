@@ -16,8 +16,8 @@ from model import z_dim, kl, NNProc
 from utils import get_proc_meshes, render, print_report
 from applications import VolRenderModel
 sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
-from procedure2 import Procedure
-from makerawdata import voxelize_mesh
+#from procedure2 import Procedure
+from makerawdata import voxelize_mesh # todo voxelize_mesh
 
 shapenetdict = {
     'bed': ('02818832', ['c2b65540d51fada22bfa21768064df9c']),
