@@ -9,7 +9,7 @@ import pyvista as pv
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from model import ShapeInfo
 sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
-from procedure2 import Procedure
+#from procedure2 import Procedure
 
 pl = pv.Plotter(off_screen=True, window_size=(256, 256))
 

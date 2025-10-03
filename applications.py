@@ -26,7 +26,7 @@ from dataset import ShapeDataset
 from model import z_dim, kl, NNProc, VoxelLoss
 from utils import get_proc_meshes, render, print_report
 sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
-from procedure2 import Procedure
+#from procedure2 import Procedure
 
 datafilestr = os.path.join('/', 'mnt', 'Research', 'Data', 'dataset', 'pml', '{}.hdf5')
 
@@ -258,9 +258,9 @@ def save_predictions():
     #for shape in ['table']:
     for shape in ['bed', 'chair', 'shelf', 'table', 'sofa']:
         #predict_voxel_from_param_direct(shape)
-        #predict_param_from_voxel_direct(shape)
+        predict_param_from_voxel_direct(shape)
         #predict_param_from_voxel_optim(shape)
-        predict_param_from_image_optim(shape)
+        #predict_param_from_image_optim(shape)
 
 def save_visuals():
     #for shape in ['table']:
@@ -291,6 +291,25 @@ def temp():
             param_preds
         )
 
+def predict_params_from_mesh(mesh, shape_type):
+    # 1. 将mesh转换为64x64x64体素
+    voxel_grid = trimesh.voxel.VoxelGrid(mesh, pitch=1.0/64)
+    voxels = voxel_grid.matrix.astype(np.float32)
+    voxels = torch.from_numpy(voxels).unsqueeze(0).unsqueeze(0)  # 添加batch和channel维度
+
+    # 2. 加载训练好的模型
+    model = NNProc(shape_type)
+    model.load_state_dict(torch.load(os.path.join('models', f'{shape_type}_model.pt')))
+    model.eval()
+
+    # 3. 使用模型预测参数
+    with torch.no_grad():
+        # 先用体素编码器得到潜在编码
+        latent = model.voxel_enc.predict(voxels)
+        # 再用参数解码器得到最终参数
+        params = model.param_dec.predict(latent)
+
+    return params[0]  # 返回预测的参数
 
 if __name__ == "__main__":
     #save_predictions()
