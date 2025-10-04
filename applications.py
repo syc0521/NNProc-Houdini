@@ -303,36 +303,23 @@ def load_mesh_from_npz(filepath):
 
 def mesh_to_voxels_test(mesh, resolution=64):
     voxel_grid = mesh.voxelized(pitch=1.0 / resolution)
-    voxel_grid = voxel_grid.fill()  # 填充内部
+    voxel_grid = voxel_grid.fill()
 
     s = trimesh.Scene()
     s.add_geometry(voxel_grid)
     s.show()
 
 def mesh_to_voxels(mesh, resolution=64):
-    # 将mesh缩放到单位立方体内
-    mesh = mesh.copy()
-    mesh.vertices -= mesh.bounds[0]
-    scale = 1.0 / np.max(mesh.bounds[1] - mesh.bounds[0])
-    mesh.vertices *= scale
-
-    # 创建体素网格
     voxel_grid = mesh.voxelized(pitch=1.0 / resolution)
-    voxel_grid = voxel_grid.fill()  # 填充内部
-
-    s = trimesh.Scene()
-    # Add the voxelized mesh to the scene. If want to also show the intial mesh uncomment the second line and change the alpha channel of in the loop to something <100
-    s.add_geometry(voxel_grid)
-    # s.add_geometry(mesh)
-    s.show()
+    voxel_grid = voxel_grid.fill()
 
     # 确保体素大小正确
-    dense_grid = np.zeros((resolution, resolution, resolution), dtype='float64')
+    dense_grid = np.zeros((resolution, resolution, resolution), dtype=float)
     points = voxel_grid.points
     indices = (points * resolution).astype(int)
     # 将超出范围的索引裁剪到边界
     indices = np.clip(indices, 0, resolution - 1)
-    dense_grid[indices[:, 0], indices[:, 1], indices[:, 2]] = indices[:, 0], indices[:, 1], indices[:, 2]
+    dense_grid[indices[:, 0], indices[:, 1], indices[:, 2]] = 1.0
 
     return dense_grid
 
@@ -341,6 +328,7 @@ def predict_params_from_mesh(mesh, shape_type):
     voxel_grid = mesh_to_voxels(mesh, 64)
     # voxels = voxel_grid.matrix.astype(np.float32)
     voxels = torch.from_numpy(voxel_grid).unsqueeze(0).unsqueeze(0)  # 添加batch和channel维度
+    voxels = torch.Tensor(voxels).float()
 
     # 2. 加载训练好的模型
     model = NNProc(shape_type)
@@ -360,8 +348,9 @@ def main():
     #save_predictions()
     #save_visuals()
     mesh = load_mesh_from_npz('table_example.npz')
-    mesh_to_voxels_test(mesh, 64)
-    #predict_params_from_mesh(mesh, 'shelf')
+    # mesh_to_voxels_test(mesh, 64)
+    param = predict_params_from_mesh(mesh, 'table')
+    print(param)
     #temp()
 
 if __name__ == "__main__":
