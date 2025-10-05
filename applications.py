@@ -1,4 +1,5 @@
 import io
+import math
 import os
 import sys
 import time
@@ -24,6 +25,7 @@ from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.loss import chamfer_distance
 from dataset import ShapeDataset
 from model import z_dim, kl, NNProc, VoxelLoss
+from recon_partnet import voxelize_mesh
 from utils import get_proc_meshes, render, print_report
 sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
 #from procedure2 import Procedure
@@ -292,13 +294,21 @@ def temp():
         )
 
 def load_mesh_from_npz(filepath):
-    """从npz文件加载mesh数据"""
     data = np.load(filepath)
     mesh = trimesh.Trimesh(
-        vertices=data['vertices'],
-        faces=data['faces'],
-        vertex_normals=data['vertex_normals']
+        vertices=data.vertices,
+        faces=data.faces,
+        vertex_normals=data.vertex_normals
     )
+    t = np.sum(mesh.bounding_box.bounds, axis=0) / 2
+    mesh.apply_translation(-t)
+    s = np.max(mesh.extents)
+    mesh.apply_scale(1 / s)
+    angle = math.pi
+    direction = [0, 1, 0]
+    center = [0, 0, 0]
+    rot_matrix = trimesh.transformations.rotation_matrix(angle, direction, center)
+    mesh.apply_transform(rot_matrix)
     return mesh
 
 def mesh_to_voxels_test(mesh, resolution=64):
@@ -309,26 +319,22 @@ def mesh_to_voxels_test(mesh, resolution=64):
     s.add_geometry(voxel_grid)
     s.show()
 
-def mesh_to_voxels(mesh, resolution=64):
-    voxel_grid = mesh.voxelized(pitch=1.0 / resolution)
-    voxel_grid = voxel_grid.fill()
-
-    # 确保体素大小正确
-    dense_grid = np.zeros((resolution, resolution, resolution), dtype=float)
-    points = voxel_grid.points
-    indices = (points * resolution).astype(int)
-    # 将超出范围的索引裁剪到边界
-    indices = np.clip(indices, 0, resolution - 1)
-    dense_grid[indices[:, 0], indices[:, 1], indices[:, 2]] = 1.0
-
-    return dense_grid
+def mesh_to_voxels(mesh):
+    voxel = torch.unsqueeze(
+        torch.unsqueeze(
+            torch.tensor(
+                voxelize_mesh(mesh),
+                dtype=torch.float32),
+            dim=0
+        ),
+        dim=0
+    )
+    return voxel.cuda()
 
 def predict_params_from_mesh(mesh, shape_type):
     # 1. 将mesh转换为64x64x64体素
-    voxel_grid = mesh_to_voxels(mesh, 64)
+    voxels = mesh_to_voxels(mesh)
     # voxels = voxel_grid.matrix.astype(np.float32)
-    voxels = torch.from_numpy(voxel_grid).unsqueeze(0).unsqueeze(0)  # 添加batch和channel维度
-    voxels = torch.Tensor(voxels).float()
 
     # 2. 加载训练好的模型
     model = NNProc(shape_type)
@@ -336,11 +342,10 @@ def predict_params_from_mesh(mesh, shape_type):
     model.eval()
 
     # 3. 使用模型预测参数
-    with torch.no_grad():
-        # 先用体素编码器得到潜在编码
-        latent = model.voxel_enc.predict(voxels)
-        # 再用参数解码器得到最终参数
-        params = model.param_dec.predict(latent)
+    # 先用体素编码器得到潜在编码
+    latent = model.voxel_enc.predict(voxels)
+    # 再用参数解码器得到最终参数
+    params = model.param_dec.predict(latent)
 
     return params[0]  # 返回预测的参数
 
