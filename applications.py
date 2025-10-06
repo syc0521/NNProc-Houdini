@@ -3,6 +3,7 @@ import math
 import os
 import sys
 import time
+import open3d as o3d
 import h5py
 import numpy as np
 from tqdm import tqdm
@@ -25,10 +26,9 @@ from pytorch3d.ops import sample_points_from_meshes
 from pytorch3d.loss import chamfer_distance
 from dataset import ShapeDataset
 from model import z_dim, kl, NNProc, VoxelLoss
-from recon_partnet import voxelize_mesh
 from utils import get_proc_meshes, render, print_report
 sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
-#from procedure2 import Procedure
+from proc_shape.procedure import Procedure
 
 datafilestr = os.path.join('/', 'mnt', 'Research', 'Data', 'dataset', 'pml', '{}.hdf5')
 
@@ -296,9 +296,9 @@ def temp():
 def load_mesh_from_npz(filepath):
     data = np.load(filepath)
     mesh = trimesh.Trimesh(
-        vertices=data.vertices,
-        faces=data.faces,
-        vertex_normals=data.vertex_normals
+        vertices=data['vertices'],
+        faces=data['faces'],
+        vertex_normals=data['vertex_normals']
     )
     t = np.sum(mesh.bounding_box.bounds, axis=0) / 2
     mesh.apply_translation(-t)
@@ -311,50 +311,42 @@ def load_mesh_from_npz(filepath):
     mesh.apply_transform(rot_matrix)
     return mesh
 
-def mesh_to_voxels_test(mesh, resolution=64):
-    voxel_grid = mesh.voxelized(pitch=1.0 / resolution)
-    voxel_grid = voxel_grid.fill()
-
-    s = trimesh.Scene()
-    s.add_geometry(voxel_grid)
-    s.show()
+def voxelize_mesh(mesh: trimesh.Trimesh):
+    rsl = 64
+    omesh = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(mesh.vertices), o3d.utility.Vector3iVector(mesh.faces))
+    voxels = o3d.geometry.VoxelGrid.create_from_triangle_mesh(omesh, voxel_size=(1.0 / (rsl - 1)))
+    o3d.visualization.draw_geometries([voxels])
+    voxels = voxels.get_voxels()  # returns list of voxels
+    indices = np.stack(list(vx.grid_index for vx in voxels))
+    indices = indices + (np.array([rsl-1, rsl-1, rsl-1]) - np.max(indices, axis=0)) // 2
+    voxel_arr = np.zeros((rsl, rsl, rsl), dtype=np.uint8)
+    voxel_arr[tuple(indices.T)] = 1
+    return voxel_arr
 
 def mesh_to_voxels(mesh):
-    voxel = torch.unsqueeze(
-        torch.unsqueeze(
-            torch.tensor(
-                voxelize_mesh(mesh),
-                dtype=torch.float32),
-            dim=0
-        ),
-        dim=0
-    )
+    voxel = torch.tensor(voxelize_mesh(mesh), dtype=torch.float32)
+    voxel = torch.unsqueeze(torch.unsqueeze(voxel, dim=0), dim=0)
     return voxel.cuda()
 
 def predict_params_from_mesh(mesh, shape_type):
-    # 1. 将mesh转换为64x64x64体素
     voxels = mesh_to_voxels(mesh)
-    # voxels = voxel_grid.matrix.astype(np.float32)
 
-    # 2. 加载训练好的模型
+    # load model
     model = NNProc(shape_type)
     model.load_state_dict(torch.load(os.path.join('models', f'{shape_type}_model.pt')))
     model.eval()
 
-    # 3. 使用模型预测参数
-    # 先用体素编码器得到潜在编码
+    # predict parameters
     latent = model.voxel_enc.predict(voxels)
-    # 再用参数解码器得到最终参数
     params = model.param_dec.predict(latent)
 
-    return params[0]  # 返回预测的参数
+    return params[0]
 
 def main():
     #save_predictions()
     #save_visuals()
-    mesh = load_mesh_from_npz('table_example.npz')
-    # mesh_to_voxels_test(mesh, 64)
-    param = predict_params_from_mesh(mesh, 'table')
+    mesh = load_mesh_from_npz('bed_example.npz')
+    param = predict_params_from_mesh(mesh, 'bed')
     print(param)
     #temp()
 

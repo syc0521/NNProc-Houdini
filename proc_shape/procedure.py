@@ -8,7 +8,7 @@ import bmesh
 import mathutils
 import trimesh
 import open3d as o3d
-from paramvectordef import ParamVectorDef
+from proc_shape.paramvectordef import ParamVectorDef
 
 def get_transform(loc, scl):
     mat_loc = mathutils.Matrix.Translation(loc)
@@ -435,6 +435,14 @@ def unit_test(args):
     for omesh in omeshes:
         o3d.visualization.draw_geometries([omesh])
 
+def generate_random_model(shape, filepath):
+    proc = Procedure(shape)
+    paramvector = proc.paramvecdef.get_random_vectors(1)[0]
+    mesh = proc.get_shape(paramvector)
+    print(paramvector)
+    save_mesh_to_npz(mesh, filepath)
+    return mesh
+
 def generate_model(shape, paramvector, filepath):
     proc = Procedure(shape)
     mesh = proc.get_shape(paramvector)
@@ -451,14 +459,12 @@ def preview_model(shape, paramvector):
     o3d.visualization.draw_geometries([omesh])
 
 def save_mesh_to_npz(mesh, filepath):
-    """将trimesh对象序列化保存为npz格式"""
     np.savez(filepath,
              vertices=mesh.vertices,
              faces=mesh.faces,
              vertex_normals=mesh.vertex_normals)
 
 def load_mesh_from_npz(filepath):
-    """从npz文件加载mesh数据"""
     data = np.load(filepath)
     mesh = trimesh.Trimesh(
         vertices=data['vertices'],
@@ -471,8 +477,11 @@ def load_mesh_from_npz(filepath):
 
 if __name__ == '__main__':
     # [[0.8659271  0.43463287 0.23709717 0.31811222]]
-    preview_model('table', [0.865, 0.434, 0.237, 0.318, True, 'round'])
-    generate_model('table', [0.6, 0.4, 0.05, 0.05, True, 'round'], 'table_example.npz')
+    # [[0.20810321 0.3139289  0.80426896 0.9977278 ]]
+    preview_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0])
+    # (0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0)
+    # generate_random_model('bed', 'bed_example.npz')
+    # generate_model('table', [0.6, 0.4, 0.05, 0.05, True, 'round'], 'table_example.npz')
     # parser = argparse.ArgumentParser()
     # parser.add_argument("--num_samples", type=int, default=1, help="Number of examples")
     # parsed_args = parser.parse_args()
