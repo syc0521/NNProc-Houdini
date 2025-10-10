@@ -9,6 +9,7 @@ import mathutils
 import trimesh
 import open3d as o3d
 from proc_shape.paramvectordef import ParamVectorDef
+import h5py
 
 def get_transform(loc, scl):
     mat_loc = mathutils.Matrix.Translation(loc)
@@ -474,14 +475,36 @@ def load_mesh_from_npz(filepath):
     print(mesh.encoding)
     return mesh
 
+def test_generate_hdf5(shape_type):
+    proc = Procedure(shape_type)
+    param_vector = proc.paramvecdef.get_random_vectors(1)
+    mesh = proc.get_shape(param_vector[0])
+    param_encode = np.concatenate(proc.paramvecdef.encode(param_vector), axis=1)
+    print(param_vector[0], param_encode)
+    with h5py.File('../dataset/table_example.hdf5', 'w') as f:
+        subgroup = f.create_group('test')
+
+        mesh_group = subgroup.create_group('msh')
+        mesh_group.create_dataset('v', data=mesh.vertices)
+        mesh_group.create_dataset('f', data=mesh.faces)
+
+        import applications
+        voxel = applications.mesh_to_voxels(mesh).cpu()
+        voxels = np.asarray(np.asarray(voxel))
+        subgroup.create_dataset('v', data=voxels)
+
+        param_group = subgroup.create_group('prm')
+
+        param_group.create_dataset('0', data=param_encode)
+
 
 if __name__ == '__main__':
-    # [[0.8659271  0.43463287 0.23709717 0.31811222]]
-    # [[0.20810321 0.3139289  0.80426896 0.9977278 ]]
-    preview_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0])
+    test_generate_hdf5('table')
+    # preview_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0])
     # (0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0)
     # generate_random_model('bed', 'bed_example.npz')
-    # generate_model('table', [0.6, 0.4, 0.05, 0.05, True, 'round'], 'table_example.npz')
+    # generate_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'box', 1], '../../bed_example.npz')
+    # generate_model('table', [0.6, 0.4, 0.05, 0.05, False, 'square'], '../table_example.npz')
     # parser = argparse.ArgumentParser()
     # parser.add_argument("--num_samples", type=int, default=1, help="Number of examples")
     # parsed_args = parser.parse_args()
