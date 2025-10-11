@@ -329,7 +329,7 @@ def voxelize_mesh(mesh: trimesh.Trimesh, visualize=False):
 def mesh_to_voxels(mesh, visualize=False):
     voxel = torch.tensor(voxelize_mesh(mesh, visualize), dtype=torch.float32)
     voxel = torch.unsqueeze(torch.unsqueeze(voxel, dim=0), dim=0)
-    return voxel.cuda()
+    return voxel
 
 def predict_params_from_mesh(mesh, shape_type, visualize=False):
     voxels = mesh_to_voxels(mesh, visualize)

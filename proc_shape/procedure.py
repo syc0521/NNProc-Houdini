@@ -10,6 +10,7 @@ import trimesh
 import open3d as o3d
 from proc_shape.paramvectordef import ParamVectorDef
 import h5py
+import config_data
 
 def get_transform(loc, scl):
     mat_loc = mathutils.Matrix.Translation(loc)
@@ -475,37 +476,30 @@ def load_mesh_from_npz(filepath):
     print(mesh.encoding)
     return mesh
 
-def test_generate_hdf5(shape_type, amount):
-    proc = Procedure(shape_type)
+def generate_hdf5(shape_type, amount, mode:config_data.training_mode):
+    # todo train+test
+    proc = Procedure(shape_type) # モデルの定義
     param_vector = proc.paramvecdef.get_random_vectors(amount)
-    meshes = []
-    for i in range(amount):
-        mesh = proc.get_shape(param_vector[i])
-        meshes.append(mesh)
-
     encoded = proc.paramvecdef.encode(param_vector)
     param_encode = np.concatenate(encoded, axis=1)
     print(param_vector[0], param_encode)
+
     with h5py.File('../dataset/table_example.hdf5', 'w') as f:
-        subgroup = f.create_group('test')
+        subgroup = f.create_group(mode)
 
         mesh_group = subgroup.create_group('msh')
-        for i, mesh in enumerate(meshes):
+        for i in range(amount): # 各モデルのメッシュを生成して保存
+            mesh = proc.get_shape(param_vector[i])
             mesh_sub_group = mesh_group.create_group(i.__str__())
             mesh_sub_group.create_dataset('v', data=mesh.vertices)
             mesh_sub_group.create_dataset('f', data=mesh.faces)
 
-        # import applications
-        # voxel = applications.mesh_to_voxels(mesh).cpu()
-        # voxels = np.asarray(np.asarray(voxel))
-        # subgroup.create_dataset('v', data=voxels)
-
         subgroup.create_dataset('prm', data=param_encode)
 
-def test_read_hdf5(shape_type):
+def test_read_hdf5(shape_type, mode:config_data.training_mode):
     proc = Procedure(shape_type)
     with h5py.File('../dataset/table_example.hdf5', 'r') as f:
-        subgroup:h5py.File = f['test']
+        subgroup:h5py.File = f[mode]
         param_encode = np.array(subgroup['prm'])
         print(param_encode.shape)
 
@@ -527,8 +521,10 @@ def test_read_hdf5(shape_type):
 
 
 if __name__ == '__main__':
-    test_read_hdf5('table')
-    # test_generate_hdf5('table', 10)
+    # from dataset import ShapeDataset
+    # dataset = ShapeDataset('../dataset/table_example.hdf5', config_data.training_mode.value)
+    # test_read_hdf5('table')
+    generate_hdf5('table', 50, config_data.training_mode.value)
     # preview_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0])
     # (0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0)
     # generate_random_model('bed', 'bed_example.npz')

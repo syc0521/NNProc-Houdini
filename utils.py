@@ -10,6 +10,8 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from model import ShapeInfo
 sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
 from proc_shape.procedure import Procedure
+import open3d as o3d
+import torch
 
 pl = pv.Plotter(off_screen=True, window_size=(256, 256))
 
@@ -72,3 +74,16 @@ def print_report(shape, predictions, targets):
             evaluate_discrete(np.argmax(y, axis=1), np.argmax(y_pred, axis=1))
         else:
             evaluate_discrete(y, np.round(y_pred))
+
+def voxelize_mesh(mesh: trimesh.Trimesh, visualize=False):
+    rsl = 64
+    omesh = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(mesh.vertices), o3d.utility.Vector3iVector(mesh.faces))
+    voxels = o3d.geometry.VoxelGrid.create_from_triangle_mesh(omesh, voxel_size=(1.0 / (rsl - 1)))
+    if visualize:
+        o3d.visualization.draw_geometries([voxels])
+    voxels = voxels.get_voxels()  # returns list of voxels
+    indices = np.stack(list(vx.grid_index for vx in voxels))
+    indices = indices + (np.array([rsl-1, rsl-1, rsl-1]) - np.max(indices, axis=0)) // 2
+    voxel_arr = np.zeros((rsl, rsl, rsl), dtype=np.uint8)
+    voxel_arr[tuple(indices.T)] = 1
+    return torch.tensor(voxel_arr, dtype=torch.float32)

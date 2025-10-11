@@ -1,9 +1,10 @@
 import h5py
 import numpy as np
 import torch
+import trimesh
+import utils
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler
-
 
 class ShapeDataset(Dataset):
     def __init__(self, data_file, mode='train'):
@@ -11,18 +12,31 @@ class ShapeDataset(Dataset):
         self.f = h5py.File(data_file, 'r')
         self.f = self.f[mode]
         self.mode = mode
-        self.num_data_points = len(self.f['prm']['0'])
-        self.prm = [torch.tensor(np.array(self.f['prm'][str(i)]), dtype=torch.float32) for i in range(len(self.f['prm']))]
-        self.vxl = torch.tensor(np.array(self.f['vxl']), dtype=torch.float32)
-        self.img = torch.tensor(np.array(self.f['img']), dtype=torch.float32) / 255.0
-        self.sil = torch.tensor(np.array(self.f['sil']), dtype=torch.float32) / 255.0
+        self.num_data_points = len(self.f['prm'][0])
+
+        mesh_group = self.f['msh']
+        voxels = []
+        for key in range(mesh_group.__len__()):
+            mesh_sub_group = mesh_group[key.__str__()]
+            v = np.array(mesh_sub_group['v'])
+            f = np.array(mesh_sub_group['f'])
+            mesh = trimesh.Trimesh(vertices=v, faces=f)
+            voxel = utils.voxelize_mesh(mesh)
+            voxels.append(torch.unsqueeze(voxel, dim=0))
+
+        self.vxl = torch.stack(voxels, dim=0)
+        self.mesh_shape = self.vxl.shape[1:]
+        self.prm = [torch.tensor(np.array(self.f['prm'][i]), dtype=torch.float32) for i in range(len(self.f['prm']))]
+        print(self.vxl.shape, self.prm)
+        # self.img = torch.tensor(np.array(self.f['img']), dtype=torch.float32) / 255.0
+        # self.sil = torch.tensor(np.array(self.f['sil']), dtype=torch.float32) / 255.0
 
     def __getitem__(self, index):
         datum = {
             'prm': [prm[index] for prm in self.prm],
             'vxl': self.vxl[index],
-            'img': self.img[index],
-            'sil': self.sil[index],
+            # 'img': self.img[index],
+            # 'sil': self.sil[index],
         }
         return datum
 
