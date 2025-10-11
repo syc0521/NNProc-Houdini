@@ -475,31 +475,60 @@ def load_mesh_from_npz(filepath):
     print(mesh.encoding)
     return mesh
 
-def test_generate_hdf5(shape_type):
+def test_generate_hdf5(shape_type, amount):
     proc = Procedure(shape_type)
-    param_vector = proc.paramvecdef.get_random_vectors(1)
-    mesh = proc.get_shape(param_vector[0])
-    param_encode = np.concatenate(proc.paramvecdef.encode(param_vector), axis=1)
+    param_vector = proc.paramvecdef.get_random_vectors(amount)
+    meshes = []
+    for i in range(amount):
+        mesh = proc.get_shape(param_vector[i])
+        meshes.append(mesh)
+
+    encoded = proc.paramvecdef.encode(param_vector)
+    param_encode = np.concatenate(encoded, axis=1)
     print(param_vector[0], param_encode)
     with h5py.File('../dataset/table_example.hdf5', 'w') as f:
         subgroup = f.create_group('test')
 
         mesh_group = subgroup.create_group('msh')
-        mesh_group.create_dataset('v', data=mesh.vertices)
-        mesh_group.create_dataset('f', data=mesh.faces)
+        for i, mesh in enumerate(meshes):
+            mesh_sub_group = mesh_group.create_group(i.__str__())
+            mesh_sub_group.create_dataset('v', data=mesh.vertices)
+            mesh_sub_group.create_dataset('f', data=mesh.faces)
 
-        import applications
-        voxel = applications.mesh_to_voxels(mesh).cpu()
-        voxels = np.asarray(np.asarray(voxel))
-        subgroup.create_dataset('v', data=voxels)
+        # import applications
+        # voxel = applications.mesh_to_voxels(mesh).cpu()
+        # voxels = np.asarray(np.asarray(voxel))
+        # subgroup.create_dataset('v', data=voxels)
 
-        param_group = subgroup.create_group('prm')
+        subgroup.create_dataset('prm', data=param_encode)
 
-        param_group.create_dataset('0', data=param_encode)
+def test_read_hdf5(shape_type):
+    proc = Procedure(shape_type)
+    with h5py.File('../dataset/table_example.hdf5', 'r') as f:
+        subgroup:h5py.File = f['test']
+        param_encode = np.array(subgroup['prm'])
+        print(param_encode.shape)
+
+        param_vectors = proc.paramvecdef.decode([param_encode[:, 0:4], param_encode[:, 4:5], param_encode[:, 5:11]])
+        print(param_vectors[0])
+
+        mesh_group:h5py.File = subgroup['msh']
+        for key in range(mesh_group.__len__()):
+            mesh_sub_group = mesh_group[key.__str__()]
+            v = np.array(mesh_sub_group['v'])
+            f = np.array(mesh_sub_group['f'])
+            mesh = trimesh.Trimesh(vertices=v, faces=f)
+            # omesh = o3d.geometry.TriangleMesh(
+            #     o3d.utility.Vector3dVector(np.array(mesh.vertices, dtype=np.float64)),
+            #     o3d.utility.Vector3iVector(np.array(mesh.faces, dtype=np.int32))
+            # )
+            # omesh.compute_vertex_normals()
+            # o3d.visualization.draw_geometries([omesh])
 
 
 if __name__ == '__main__':
-    test_generate_hdf5('table')
+    test_read_hdf5('table')
+    # test_generate_hdf5('table', 10)
     # preview_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0])
     # (0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0)
     # generate_random_model('bed', 'bed_example.npz')
