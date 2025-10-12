@@ -12,7 +12,6 @@ class ShapeDataset(Dataset):
         self.f = h5py.File(data_file, 'r')
         self.f = self.f[mode]
         self.mode = mode
-        self.num_data_points = len(self.f['prm'][0])
 
         mesh_group = self.f['msh']
         voxels = []
@@ -26,8 +25,10 @@ class ShapeDataset(Dataset):
 
         self.vxl = torch.stack(voxels, dim=0)
         self.mesh_shape = self.vxl.shape[1:]
-        self.prm = [torch.tensor(np.array(self.f['prm'][i]), dtype=torch.float32) for i in range(len(self.f['prm']))]
-        print(self.vxl.shape, self.prm)
+        self.prm = [torch.tensor(np.array(self.f['prm'][str(i)]), dtype=torch.float32) for i in range(len(self.f['prm']))]
+        self.num_data_points = len(self.f['prm']['0'])
+
+        # print(self.vxl.shape, self.prm)
         # self.img = torch.tensor(np.array(self.f['img']), dtype=torch.float32) / 255.0
         # self.sil = torch.tensor(np.array(self.f['sil']), dtype=torch.float32) / 255.0
 

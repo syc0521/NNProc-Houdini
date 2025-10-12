@@ -156,9 +156,10 @@ def unit_test(shape, num_samples):
     enc_vectors = param_def.encode(vectors)
     dec_vectors = param_def.decode(enc_vectors)
     print(vectors)
+    print(enc_vectors)
     print(dec_vectors)
 
 
 if __name__ == '__main__':
-    unit_test('chair', num_samples=1)
+    unit_test('table', num_samples=1)
 
