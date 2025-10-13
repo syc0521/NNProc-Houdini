@@ -32,7 +32,7 @@ from utils import get_proc_meshes, render, print_report
 sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
 from proc_shape.procedure import Procedure
 
-datafilestr = 'dataset/{}_example.hdf5'
+datafilestr = os.path.join('/', 'mnt', 'Research', 'Data', 'dataset', 'pml', '{}.hdf5')
 
 class OptimDataset(ShapeDataset):
     def __init__(self, data_file, mode='train'):
@@ -130,18 +130,12 @@ def predict_voxel_from_param_direct(shape):
 def predict_param_from_voxel_direct(shape):
     dataset = ShapeDataset(datafilestr.format(shape), 'test')
     voxels = dataset.vxl
-    params_origin = dataset.prm
     model = NNProc(shape)
     print('Predicting parameters from voxels.')
     model.load_state_dict(torch.load(os.path.join('models', '{}_model.pt'.format(shape))))
     model.eval()
-    param_preds_origin = model.param_dec.predict(model.voxel_enc.predict(voxels))
-    proc = Procedure(shape)
-    param_preds = proc.paramvecdef.decode(param_preds_origin)
-    params = proc.paramvecdef.decode(params_origin)
-    print(param_preds)
-    print(params)
-    # np.savez(os.path.join('predictions', '{}_vxl_dir.npz'.format(shape)), *param_preds)
+    param_preds = model.param_dec.predict(model.voxel_enc.predict(voxels))
+    np.savez(os.path.join('predictions', '{}_vxl_dir.npz'.format(shape)), *param_preds)
 
 def predict_param_from_voxel_optim(shape):
     dataset = OptimDataset(datafilestr.format(shape), 'test')
@@ -358,10 +352,9 @@ def load_and_predict(shape_type, visualize=False):
     print(param)
 
 def main():
-    predict_param_from_voxel_direct('table')
     #save_predictions()
     #save_visuals()
-    #load_and_predict('table', false)
+    load_and_predict('table', false)
     #temp()
 
 if __name__ == "__main__":

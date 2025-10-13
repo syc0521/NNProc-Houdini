@@ -33,13 +33,9 @@ def optimize_model(shape):
     data_file = 'dataset/table_example.hdf5'
     train_loader, valid_loader = ShapeDataset(data_file).get_data_loader(batch_size=config_data.batch_size)
     model = NNProc(shape)
-    if os.path.exists(os.path.join('models', shape + '_model.pt')):
-        model.load_state_dict(torch.load(os.path.join('models', shape + '_model.pt'), weights_only=True))
-        model.cuda()
-
     loss_fn = NNProcLoss(shape)
     optim = torch.optim.Adam(model.parameters())
-    num_epochs = 50
+    num_epochs = 300
     scheduler = lr_scheduler.LinearLR(optim, start_factor=1.0, end_factor=0.1, total_iters=num_epochs)
     for e in range(num_epochs):
         train_loss = run_epoch(train_loader, model, loss_fn, optim, scheduler, True)
@@ -56,7 +52,7 @@ def optimize_model(shape):
             )
             torch.cuda.empty_cache()
 
-    torch.save(model.state_dict(), os.path.join('models', shape + '_model.pt'))
+    #torch.save(model.state_dict(), os.path.join('models', shape + '_model.pt'))
 
 
 if __name__ == "__main__":

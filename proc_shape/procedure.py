@@ -476,26 +476,24 @@ def load_mesh_from_npz(filepath):
     print(mesh.encoding)
     return mesh
 
-def write_data(amount, f, mode, proc):
+def generate_hdf5(shape_type, amount, mode:config_data.training_mode):
+    proc = Procedure(shape_type) # モデルの定義
     param_vector = proc.paramvecdef.get_random_vectors(amount)
     encoded = proc.paramvecdef.encode(param_vector)
-    subgroup = f.create_group(mode)
-    mesh_group = subgroup.create_group('msh')
-    for i in range(amount):  # 各モデルのメッシュを生成して保存
-        mesh = proc.get_shape(param_vector[i])
-        mesh_sub_group = mesh_group.create_group(i.__str__())
-        mesh_sub_group.create_dataset('v', data=mesh.vertices)
-        mesh_sub_group.create_dataset('f', data=mesh.faces)
-    prm_group = subgroup.create_group('prm')
-    for i in range(len(encoded)):
-        prm_group.create_dataset(i.__str__(), data=encoded[i])
-
-def generate_hdf5(shape_type, train_amount, test_amount):
-    proc = Procedure(shape_type) # モデルの定義
 
     with h5py.File('../dataset/table_example.hdf5', 'w') as f:
-        write_data(train_amount, f, config_data.TrainingMode.train.value, proc)
-        write_data(test_amount, f, config_data.TrainingMode.test.value, proc)
+        subgroup = f.create_group(mode)
+
+        mesh_group = subgroup.create_group('msh')
+        for i in range(amount): # 各モデルのメッシュを生成して保存
+            mesh = proc.get_shape(param_vector[i])
+            mesh_sub_group = mesh_group.create_group(i.__str__())
+            mesh_sub_group.create_dataset('v', data=mesh.vertices)
+            mesh_sub_group.create_dataset('f', data=mesh.faces)
+
+        prm_group = subgroup.create_group('prm')
+        for i in range(len(encoded)):
+            prm_group.create_dataset(i.__str__(), data=encoded[i])
 
 def test_read_hdf5(shape_type, mode:config_data.training_mode):
     proc = Procedure(shape_type)
@@ -522,10 +520,10 @@ def test_read_hdf5(shape_type, mode:config_data.training_mode):
 
 
 if __name__ == '__main__':
-    # from dataset import ShapeDataset
-    # dataset = ShapeDataset('../dataset/table_example.hdf5', config_data.training_mode.value)
+    from dataset import ShapeDataset
+    dataset = ShapeDataset('../dataset/table_example.hdf5', config_data.training_mode.value)
     # test_read_hdf5('table')
-    generate_hdf5('table', 512, 32)
+    # generate_hdf5('table', 50, config_data.training_mode.value)
     # preview_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0])
     # (0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0)
     # generate_random_model('bed', 'bed_example.npz')
