@@ -5,4 +5,4 @@ class TrainingMode(Enum):
     test = 'test'
 
 training_mode = TrainingMode.train
-batch_size = 4
+batch_size = 32
