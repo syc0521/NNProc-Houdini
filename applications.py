@@ -337,26 +337,6 @@ def mesh_to_voxels(mesh, visualize=False):
     voxel = torch.unsqueeze(torch.unsqueeze(voxel, dim=0), dim=0)
     return voxel
 
-def predict_params_from_mesh(mesh, shape_type, visualize=False):
-    voxels = mesh_to_voxels(mesh, visualize)
-
-    # load model
-    model = NNProc(shape_type)
-    model.load_state_dict(torch.load(os.path.join('models', f'{shape_type}_model.pt')))
-    model.eval()
-
-    # predict parameters
-    latent = model.voxel_enc.predict(voxels)
-    params = model.param_dec.predict(latent)
-
-    param_def = ParamVectorDef(shape_type)
-    return param_def.decode(params)
-
-def load_and_predict(shape_type, visualize=False):
-    mesh = load_mesh_from_npz(f'{shape_type}_example.npz')
-    param = predict_params_from_mesh(mesh, shape_type, visualize)
-    print(param)
-
 def main():
     predict_param_from_voxel_direct('table')
     #save_predictions()

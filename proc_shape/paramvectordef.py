@@ -24,28 +24,28 @@ class ParamVectorDef:
 
         if shape == 'bed':
             self.params.append(Parameter(ParamType.SCALAR, [
-                np.linspace(0.0, 1.0, 5).tolist(),
-                np.linspace(0.0, 1.0, 3).tolist(),
-                np.linspace(0.0, 1.0, 5).tolist(),
-                np.linspace(0.0, 1.0, 5).tolist(),
-                np.linspace(0.0, 1.0, 3).tolist()
+                [0.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 1.0]
             ]))
             self.params.append(Parameter(ParamType.TYPE, ['basic', 'split', 'box']))
             self.params.append(Parameter(ParamType.INTEGER, [0, 2]))
         elif shape == 'chair':
             self.params.append(Parameter(ParamType.SCALAR, [
-                np.linspace(0.0, 1.0, 6).tolist(),
-                np.linspace(0.0, 1.0, 3).tolist(),
-                np.linspace(0.0, 1.0, 5).tolist()
+                [0.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 1.0]
             ]))
             self.params.append(Parameter(ParamType.TYPE, ['basic', 'round', 'support', 'office']))
             self.params.append(Parameter(ParamType.TYPE, ['none', 'basic', 'solid', 'office']))
             self.params.append(Parameter(ParamType.TYPE, ['basic', 'hbar', 'vbar', 'office']))
         elif shape == 'shelf':
             self.params.append(Parameter(ParamType.SCALAR, [
-                np.linspace(0.0, 1.0, 8).tolist(),
-                np.linspace(0.0, 1.0, 3).tolist(),
-                np.linspace(0.0, 1.0, 3).tolist()
+                [0.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 1.0]
             ]))
             self.params.append(Parameter(ParamType.INTEGER, [1, 5]))
             self.params.append(Parameter(ParamType.INTEGER, [1, 5]))
@@ -54,34 +54,30 @@ class ParamVectorDef:
             self.params.append(Parameter(ParamType.BINARY, None))
         elif shape == 'table':
             self.params.append(Parameter(ParamType.SCALAR, [
-                np.linspace(0.0, 1.0, 8).tolist(),
-                np.linspace(0.0, 1.0, 4).tolist(),
-                np.linspace(0.0, 1.0, 3).tolist(),
-                np.linspace(0.0, 1.0, 3).tolist()
+                [0.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 1.0]
             ]))
             self.params.append(Parameter(ParamType.BINARY, None))
             self.params.append(Parameter(ParamType.TYPE, ['basic', 'support', 'round', 'split', 'square', 'solid']))
 
-    def get_random_vectors(self, max_len=3000):
-        param_domain = []
-        for param in self.params:
-            if param.paramtype == ParamType.SCALAR:
-                for elem in param.data:
-                    param_domain.append(elem)
-            elif param.paramtype == ParamType.BINARY:
-                param_domain.append([False, True])
-            elif param.paramtype == ParamType.INTEGER:
-                param_domain.append(list(range(param.data[0], param.data[1]+1)))
-            elif param.paramtype == ParamType.TYPE:
-                param_domain.append(param.data)
-        if not param_domain:
-            param_vectors = []
-        else:
-            param_vectors = [p for p in product(*param_domain)]
-        random.shuffle(param_vectors)
-        if max_len is not None:
-            if len(param_vectors) > max_len:
-                param_vectors = random.choices(param_vectors, k=max_len)
+    def get_random_vectors(self, length):
+        param_vectors = []
+        for i in range(length):
+            vector = []
+            for param in self.params:
+                paramtype = param.paramtype
+                if paramtype == ParamType.SCALAR:
+                    for dim in param.data:
+                        vector.append(dim[0] + random.random() * dim[1])
+                elif paramtype == ParamType.BINARY:
+                    vector.append(random.choice([True, False]))
+                elif paramtype == ParamType.INTEGER:
+                    vector.append(random.randint(param.data[0], param.data[1]))
+                elif paramtype == ParamType.TYPE:
+                    vector.append(random.choice(param.data))
+            param_vectors.append(vector)
         return param_vectors
 
     def encode(self, vectors):
