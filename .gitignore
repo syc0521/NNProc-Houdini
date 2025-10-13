@@ -1,1 +1,6 @@
 ﻿.idea
+models
+new_models
+dataset
+*.pt
+*.hdf5
