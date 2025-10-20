@@ -39,7 +39,7 @@ def optimize_model(shape):
 
     loss_fn = NNProcLoss(shape)
     optim = torch.optim.Adam(model.parameters())
-    num_epochs = 10
+    num_epochs = 100
     scheduler = lr_scheduler.LinearLR(optim, start_factor=1.0, end_factor=0.1, total_iters=num_epochs)
     for e in range(num_epochs):
         train_loss = run_epoch(train_loader, model, loss_fn, optim, scheduler, True)

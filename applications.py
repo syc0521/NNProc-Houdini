@@ -139,19 +139,22 @@ def predict_param_from_voxel_direct(shape):
     proc = Procedure(shape)
     param_preds = proc.paramvecdef.decode(param_preds_origin)
     params = proc.paramvecdef.decode(params_origin)
-    print(param_preds)
-    print(params)
+    for i in range(len(param_preds)):
+        print('予測の結果：{}\n元パラメータ：{}\n'.format(param_preds[i], params[i]))
+
     # np.savez(os.path.join('predictions', '{}_vxl_dir.npz'.format(shape)), *param_preds)
 
 def predict_param_from_voxel_optim(shape):
     dataset = OptimDataset(datafilestr.format(shape), 'test')
+    params_origin = dataset.prm
+    proc = Procedure(shape)
     data_loader = dataset.get_data_loader()
     model = NNProc(shape)
-    model.load_state_dict(torch.load(os.path.join('models', shape + '_model.pt')))
+    model.load_state_dict(torch.load(os.path.join('new_models', shape + '_model.pt')))
     model.eval()
     loss_fn = VoxelLoss()
     optim = torch.optim.Adam([dataset.mu, dataset.logvar], lr=0.1)
-    num_epochs = 1000
+    num_epochs = 10
     scheduler = lr_scheduler.LinearLR(optim, start_factor=1.0, end_factor=0.01, total_iters=num_epochs)
     for e in range(num_epochs):
         train_loss = 0.0
@@ -170,8 +173,10 @@ def predict_param_from_voxel_optim(shape):
         scheduler.step()
         print('Epoch {}: Loss: {:.5f}'.format(e+1, train_loss))
 
-    param_preds = model.param_dec.predict(dataset.mu)
-    np.savez(os.path.join('predictions', '{}_vxl_opt.npz'.format(shape)), *param_preds)
+    param_preds = model.param_dec.predict(model.voxel_enc.predict(dataset.vxl))
+    print(proc.paramvecdef.decode(params_origin))
+    print(proc.paramvecdef.decode(param_preds))
+    #np.savez(os.path.join('predictions', '{}_vxl_opt.npz'.format(shape)), *param_preds)
 
 def predict_param_from_image_optim(shape):
     dataset = OptimDataset(datafilestr.format(shape), 'test')
