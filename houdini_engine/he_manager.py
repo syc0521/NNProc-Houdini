@@ -320,8 +320,8 @@ class HoudiniEngineManager(object):
             return {
                 "internal_id": param_info.id,
                 "label": label,
-                "ui_min": ui_min,
-                "ui_max": ui_max,
+                "min": ui_min,
+                "max": ui_max,
                 "param_type": param_type,
                 "choices": [he_utility.getString(self.session, p.labelSH) for p in choices]
             }
@@ -329,8 +329,8 @@ class HoudiniEngineManager(object):
         return {
             "internal_id": param_info.id,
             "label": label,
-            "ui_min": ui_min,
-            "ui_max": ui_max,
+            "min": ui_min,
+            "max": ui_max,
             "param_type": param_type,
         }
 

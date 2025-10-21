@@ -21,14 +21,14 @@ def load_hda(hda_path):
     hda_loaded, asset_name = he_instance.loadAsset(hda_path)
     return asset_name
 
-def main():
+def generate_param_def(folder, name):
     session = create_session()
     if session is None:
         print("Failed to create the Houdini Engine session.")
         return
 
     hda_node_id = 0
-    hda_loaded, asset_name = he_instance.loadAsset("../hdas/table.hda")
+    hda_loaded, asset_name = he_instance.loadAsset(os.path.join(folder, name) + ".hda")
     if not hda_loaded:
         print("Failed to load the HDA.")
         return
@@ -41,7 +41,14 @@ def main():
     all_params = he_instance.getAllParameterInfo(hda_node_id)
     folder_param = all_params[1]
     output_params = [he_instance.getParamDetailData(p) for p in all_params if p.parentId == folder_param.id]
-    print(json.dumps(output_params, indent=4))
+    out_path = os.path.join(folder, name) + "_param_def.json"
+    with open(out_path, "w") as f:
+        json.dump(output_params, f, indent=4)
+
+def main():
+    hda_folder = "../hdas"
+    hda_name = "table"
+    generate_param_def(hda_folder, hda_name)
 
 if __name__ == '__main__':
     main()
