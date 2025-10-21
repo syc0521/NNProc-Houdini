@@ -27,7 +27,6 @@ import hapi
 from enum import Enum
 import he_utility
 
-
 class SessionType(Enum):
     InProcess = 1
     NewNamedPipe = 2
@@ -35,6 +34,33 @@ class SessionType(Enum):
     ExistingNamedPipe = 4
     ExistingTCPSocket = 5
     ExistingSharedMemory = 6
+
+class ParamType(Enum):
+    Int = 0
+    MultiParmInt = 1
+    Toggle = 2
+    Button = 3
+    Float = 4
+    Color = 5
+    String = 6
+    PathFile = 7
+    PathFileGeo = 8
+    PathFileImage = 9
+    Node = 10
+    FolderList = 11
+    FolderListRadio = 12
+    Folder = 13
+    Label = 14
+    Separator = 15
+    PathFileDir = 16
+    Max = 17
+
+class ChoiceListType(Enum):
+    Null = 0
+    Normal = 1
+    Mini = 2
+    Replace = 3
+    Toggle = 4
 
 
 class HoudiniEngineManager(object):
@@ -268,6 +294,46 @@ class HoudiniEngineManager(object):
 
         return True
 
+
+    def getAllParameterInfo(self, node_id):
+        node_info = hapi.getNodeInfo(self.session, node_id)
+
+        parm_infos = hapi.getParameters(
+            self.session,
+            node_id,
+            0,
+            node_info.parmCount
+        )
+        return parm_infos
+
+    def getParamDetailData(self, param_info):
+        ui_max = param_info.UIMax
+        ui_min = param_info.UIMin
+        label_id = param_info.labelSH
+        param_type = param_info.type
+        choice_list_type = param_info.choiceListType
+        label = he_utility.getString(self.session, label_id)
+        if param_type == ParamType.Int.value and choice_list_type == ChoiceListType.Normal.value:
+            choice_index = param_info.choiceIndex
+            choice_count = param_info.choiceCount
+            choices = hapi.getParmChoiceLists(self.session, 0, choice_index, choice_count)
+            return {
+                "internal_id": param_info.id,
+                "label": label,
+                "ui_min": ui_min,
+                "ui_max": ui_max,
+                "param_type": param_type,
+                "choices": [he_utility.getString(self.session, p.labelSH) for p in choices]
+            }
+
+        return {
+            "internal_id": param_info.id,
+            "label": label,
+            "ui_min": ui_min,
+            "ui_max": ui_max,
+            "param_type": param_type,
+        }
+
     def getParameters(self, node_id):
         '''Query and list the paramters of the given node'''
         node_info = hapi.getNodeInfo(self.session, node_id)
@@ -285,6 +351,9 @@ class HoudiniEngineManager(object):
             print("  Name: ", end='')
             print(he_utility.getString(
                 self.session, parm_infos[i].nameSH))
+            print("  Label: ", end='')
+            print(he_utility.getString(
+                self.session, parm_infos[i].labelSH))
             print("  Values: (", end='')
 
             if parm_infos[i].type == hapi.parmType.Int:
@@ -436,3 +505,5 @@ class HoudiniEngineManager(object):
             print("  {}".format(attr_name))
 
         return True
+
+he_instance = HoudiniEngineManager()
