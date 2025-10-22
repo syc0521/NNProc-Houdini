@@ -1,10 +1,5 @@
-﻿import os, sys
-import json
-hfs = os.environ.get('HFS')
-path = os.path.join(hfs, 'houdini\python3.11libs')
-os.add_dll_directory(os.path.join(hfs, 'bin'))
-os.add_dll_directory(os.path.join(hfs, 'houdini\python3.11libs'))
-sys.path.append(path)
+﻿import he_init
+import json, os
 from he_manager import he_instance, SessionType
 
 def create_session():
@@ -44,6 +39,9 @@ def generate_param_def(folder, name):
     out_path = os.path.join(folder, name) + "_param_def.json"
     with open(out_path, "w") as f:
         json.dump(output_params, f, indent=4)
+        f.close()
+    print('Parameter definition saved to', out_path)
+
 
 def main():
     hda_folder = "../hdas"

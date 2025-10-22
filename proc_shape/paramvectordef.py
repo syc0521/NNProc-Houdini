@@ -1,8 +1,6 @@
 import random
 import numpy as np
 from enum import Enum
-from itertools import product
-
 
 class ParamType(Enum):
     SCALAR = 1
@@ -16,51 +14,12 @@ class Parameter:
         self.paramtype = paramtype
         self.data = data
 
-
 class ParamVectorDef:
-    def __init__(self, shape):
-        self.shape = shape
+    def __init__(self):
         self.params = []
 
-        if shape == 'bed':
-            self.params.append(Parameter(ParamType.SCALAR, [
-                [0.0, 1.0],
-                [0.0, 1.0],
-                [0.0, 1.0],
-                [0.0, 1.0],
-                [0.0, 1.0]
-            ]))
-            self.params.append(Parameter(ParamType.TYPE, ['basic', 'split', 'box']))
-            self.params.append(Parameter(ParamType.INTEGER, [0, 2]))
-        elif shape == 'chair':
-            self.params.append(Parameter(ParamType.SCALAR, [
-                [0.0, 1.0],
-                [0.0, 1.0],
-                [0.0, 1.0]
-            ]))
-            self.params.append(Parameter(ParamType.TYPE, ['basic', 'round', 'support', 'office']))
-            self.params.append(Parameter(ParamType.TYPE, ['none', 'basic', 'solid', 'office']))
-            self.params.append(Parameter(ParamType.TYPE, ['basic', 'hbar', 'vbar', 'office']))
-        elif shape == 'shelf':
-            self.params.append(Parameter(ParamType.SCALAR, [
-                [0.0, 1.0],
-                [0.0, 1.0],
-                [0.0, 1.0]
-            ]))
-            self.params.append(Parameter(ParamType.INTEGER, [1, 5]))
-            self.params.append(Parameter(ParamType.INTEGER, [1, 5]))
-            self.params.append(Parameter(ParamType.BINARY, None))
-            self.params.append(Parameter(ParamType.BINARY, None))
-            self.params.append(Parameter(ParamType.BINARY, None))
-        elif shape == 'table':
-            self.params.append(Parameter(ParamType.SCALAR, [
-                [0.0, 1.0],
-                [0.0, 1.0],
-                [0.0, 1.0],
-                [0.0, 1.0]
-            ]))
-            self.params.append(Parameter(ParamType.BINARY, None))
-            self.params.append(Parameter(ParamType.TYPE, ['basic', 'support', 'round', 'split', 'square', 'solid']))
+    def append_param(self, paramtype, data):
+        self.params.append(Parameter(paramtype, data))
 
     def get_random_vectors(self, length):
         param_vectors = []
@@ -133,29 +92,4 @@ class ParamVectorDef:
                 vector.extend(collector[j][i])
             decoded_vectors.append(vector)
         return decoded_vectors
-
-
-def unit_test(shape, num_samples):
-    param_def = ParamVectorDef(shape)
-    '''
-    Parameter vectors can be manually defined, such as
-    vectors = [
-        [0.6, 0.4, 0.05, 0.05, False, 'basic'],
-        [0.6, 0.4, 0.05, 0.05, True, 'basic'],
-        [0.6, 0.4, 0.05, 0.05, True, 'support'],
-        [0.6, 0.4, 0.05, 0.05, True, 'round'],
-        [0.6, 0.4, 0.05, 0.05, False, 'split']
-    ]
-    or we can randomly sample them.
-    '''
-    vectors = param_def.get_random_vectors(num_samples)
-    enc_vectors = param_def.encode(vectors)
-    dec_vectors = param_def.decode(enc_vectors)
-    print(vectors)
-    print(enc_vectors)
-    print(dec_vectors)
-
-
-if __name__ == '__main__':
-    unit_test('table', num_samples=1)
 
