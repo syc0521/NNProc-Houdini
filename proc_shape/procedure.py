@@ -525,8 +525,8 @@ if __name__ == '__main__':
     # from dataset import ShapeDataset
     # dataset = ShapeDataset('../dataset/table_example.hdf5', config_data.training_mode.value)
     # test_read_hdf5('table')
-    generate_hdf5('table', 4096, 128)
-    # preview_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0])
+    # generate_hdf5('table', 4096, 128)
+    preview_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0])
     # (0.0, 1.0, 0.0, 0.25, 0.5, 'basic', 0)
     # generate_random_model('bed', 'bed_example.npz')
     # generate_model('bed', [0.0, 1.0, 0.0, 0.25, 0.5, 'box', 1], '../../bed_example.npz')

@@ -1,23 +1,9 @@
 ﻿import he_init
 import json, os
-from he_manager import he_instance, SessionType
-
-def create_session():
-    session_type = SessionType.InProcess.value
-    named_pipe = he_instance.DEFAULT_NAMED_PIPE
-    tcp_port = he_instance.DEFAULT_TCP_PORT
-    use_cooking_thread = True
-
-    session = he_instance.startSession(session_type, named_pipe, tcp_port)
-    he_instance.initializeHAPI(use_cooking_thread)
-    return session
-
-def load_hda(hda_path):
-    hda_loaded, asset_name = he_instance.loadAsset(hda_path)
-    return asset_name
+from he_manager import he_instance
 
 def generate_param_def(folder, name):
-    session = create_session()
+    session = he_init.create_session()
     if session is None:
         print("Failed to create the Houdini Engine session.")
         return
@@ -35,10 +21,18 @@ def generate_param_def(folder, name):
 
     all_params = he_instance.getAllParameterInfo(hda_node_id)
     folder_param = all_params[1]
-    output_params = [he_instance.getParamDetailData(p) for p in all_params if p.parentId == folder_param.id]
+    detail_data = [he_instance.getParamDetailData(p) for p in all_params if p.parentId == folder_param.id]
+    float_params = [p for p in detail_data if p['param_type'] == 4]
+    bool_params = [p for p in detail_data if p['param_type'] == 2]
+    choice_params = [p for p in detail_data if 'choices' in p]
+    out_params = {
+        'float': float_params,
+        'bool': bool_params,
+        'choice': choice_params
+    }
     out_path = os.path.join(folder, name) + "_param_def.json"
     with open(out_path, "w") as f:
-        json.dump(output_params, f, indent=4)
+        json.dump(out_params, f, indent=4)
         f.close()
     print('Parameter definition saved to', out_path)
 

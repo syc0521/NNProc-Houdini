@@ -235,7 +235,7 @@ class HoudiniEngineManager(object):
 
         status = status = hapi.getStatus(
             self.session, hapi.statusType.CookState)
-        while (status > hapi.state.Ready):
+        while status > hapi.state.Ready:
             status = hapi.getStatus(self.session, hapi.statusType.CookState)
 
         if status != hapi.state.Ready:
@@ -469,5 +469,80 @@ class HoudiniEngineManager(object):
             print("  {}".format(attr_name))
 
         return True
+
+    def setParmFloatValues(self, node_id, values_array, start, length):
+        return hapi.setParmFloatValues(self.session, node_id, values_array, start, length)
+
+    def setParmBoolValue(self, node_id, name, value):
+        return hapi.setParmIntValue(self.session, node_id, name, 0, 1 if value == True else 0)
+
+    def setParmIntValue(self, node_id, name, value):
+        return hapi.setParmIntValue(self.session, node_id, name, 0, 1 if value == True else 0)
+
+    def getAttributeNames(self, node_id, part_id, owner, count):
+        part_info = hapi.getPartInfo(self.session, node_id, part_id)
+        return hapi.getAttributeNames(self.session, node_id, part_id, owner, 1)
+
+    def getAttributeInfo(self, node_id, part_id, attr_name):
+        return hapi.getAttributeInfo(self.session, node_id, part_id, attr_name, 0)
+
+    def readGeometry(self, node_id):
+        hapi.cookNode(self.session, node_id, self.cook_options)
+
+        # Check the cook status
+        status = hapi.getStatus(self.session, hapi.statusType.CookState)
+        while (status > hapi.state.Ready):
+            status = hapi.getStatus(self.session, hapi.statusType.CookState)
+
+        # Get mesh geo info.
+        print("\nGetting mesh geometry info:")
+        mesh_geo_info = hapi.getDisplayGeoInfo(self.session, node_id)
+
+        # Get mesh part info.
+        mesh_part_info = hapi.getPartInfo(self.session, mesh_geo_info.nodeId, 0)
+
+        # Get mesh face counts.
+        mesh_face_counts = hapi.getFaceCounts(
+            self.session,
+            mesh_geo_info.nodeId,
+            mesh_part_info.id,
+            0, mesh_part_info.faceCount
+        )
+        print("  Face count: {}".format(len(mesh_face_counts)))
+
+        # Get mesh vertex list.
+        mesh_vertex_list = hapi.getVertexList(
+            self.session,
+            mesh_geo_info.nodeId,
+            mesh_part_info.id,
+            0, mesh_part_info.vertexCount
+        )
+
+        print("  Vertex count: {}".format(len(mesh_vertex_list)))
+
+        def _fetchPointAttrib(owner, attrib_name):
+            mesh_attrib_info = hapi.getAttributeInfo(
+                self.session,
+                mesh_geo_info.nodeId,
+                mesh_part_info.id,
+                attrib_name, owner
+            )
+
+            mesh_attrib_data = hapi.getAttributeFloatData(
+                self.session,
+                mesh_geo_info.nodeId,
+                mesh_part_info.id,
+                attrib_name,
+                mesh_attrib_info, -1,
+                0, mesh_attrib_info.count
+            )
+
+            print("  {} attribute count: {}".format(
+                attrib_name, len(mesh_attrib_data)))
+            return mesh_attrib_data
+
+        mesh_p_attrib_info = _fetchPointAttrib(hapi.attributeOwner.Point, "P")
+
+        return mesh_p_attrib_info, mesh_vertex_list
 
 he_instance = HoudiniEngineManager()

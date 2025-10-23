@@ -1,52 +1,58 @@
-[
-    {
-        "internal_id": 5,
-        "label": "whratio",
-        "min": 0.6000000238418579,
-        "max": 3.5,
-        "param_type": 4
-    },
-    {
-        "internal_id": 6,
-        "label": "depth",
-        "min": 0.4000000059604645,
-        "max": 1.0,
-        "param_type": 4
-    },
-    {
-        "internal_id": 7,
-        "label": "top_thickness",
-        "min": 0.03999999910593033,
-        "max": 0.2199999988079071,
-        "param_type": 4
-    },
-    {
-        "internal_id": 8,
-        "label": "leg_thickness",
-        "min": 0.07000000029802322,
-        "max": 0.15000000596046448,
-        "param_type": 4
-    },
-    {
-        "internal_id": 9,
-        "label": "roundtop",
-        "min": 0.0,
-        "max": 10.0,
-        "param_type": 2
-    },
-    {
-        "internal_id": 10,
-        "label": "leg_type",
-        "min": 0.0,
-        "max": 10.0,
-        "param_type": 0,
-        "choices": [
-            "round",
-            "square",
-            "split",
-            "solid",
-            "support",
-            "basic"
-        ]
-    }
-]
+{
+    "float": [
+        {
+            "internal_id": 5,
+            "label": "whratio",
+            "min": 0.6000000238418579,
+            "max": 3.5,
+            "param_type": 4
+        },
+        {
+            "internal_id": 6,
+            "label": "depth",
+            "min": 0.4000000059604645,
+            "max": 1.0,
+            "param_type": 4
+        },
+        {
+            "internal_id": 7,
+            "label": "top_thickness",
+            "min": 0.03999999910593033,
+            "max": 0.2199999988079071,
+            "param_type": 4
+        },
+        {
+            "internal_id": 8,
+            "label": "leg_thickness",
+            "min": 0.07000000029802322,
+            "max": 0.15000000596046448,
+            "param_type": 4
+        }
+    ],
+    "bool": [
+        {
+            "internal_id": 9,
+            "label": "roundtop",
+            "min": 0.0,
+            "max": 10.0,
+            "param_type": 2
+        }
+    ],
+    "choice": [
+        {
+            "internal_id": 10,
+            "label": "leg_type",
+            "min": 0.0,
+            "max": 10.0,
+            "param_type": 0,
+            "choices": [
+                "round",
+                "square",
+                "split",
+                "solid",
+                "support",
+                "basic"
+            ]
+        }
+    ]
+}
