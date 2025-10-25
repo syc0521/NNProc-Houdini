@@ -265,7 +265,7 @@ class HoudiniEngineManager(object):
         if self._waitForCook():
             print("Cook complete.")
 
-        return True
+        return node_id
 
     def getParamDetailData(self, param_info):
         ui_max = param_info.UIMax
@@ -284,6 +284,7 @@ class HoudiniEngineManager(object):
                 "min": ui_min,
                 "max": ui_max,
                 "param_type": param_type,
+                "int_value_index":param_info.intValuesIndex,
                 "choices": [he_utility.getString(self.session, p.labelSH) for p in choices]
             }
 
@@ -292,6 +293,8 @@ class HoudiniEngineManager(object):
             "label": label,
             "min": ui_min,
             "max": ui_max,
+            "int_value_index": param_info.intValuesIndex,
+            "float_value_index": param_info.floatValuesIndex,
             "param_type": param_type,
         }
 

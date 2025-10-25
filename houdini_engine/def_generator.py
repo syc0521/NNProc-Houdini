@@ -14,10 +14,7 @@ def generate_param_def(folder, name):
         return
 
     target_node = he_instance.getNode(0)
-    hda_cooked = he_instance.createAndCookNode(asset_name, target_node.node_id)
-    if not hda_cooked:
-        print("Failed to create and cook the HDA node.")
-        return
+    he_instance.createAndCookNode(asset_name, target_node.node_id)
 
     all_params = target_node.getAllParameterInfo()
     folder_param = all_params[1]

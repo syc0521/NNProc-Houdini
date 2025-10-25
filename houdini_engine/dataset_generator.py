@@ -7,9 +7,10 @@ import h5py
 import config_data
 from tqdm import tqdm
 import trimesh
-import torch
+import utils
 
 param_defs = {}
+node_id = 0
 
 def read_param_def(name):
     with open("../hdas/{}_param_def.json".format(name), "r") as f:
@@ -60,9 +61,10 @@ def generate_model(params):
         else:
             choice_value.append(param)
 
-    target_node = he_instance.getNode(0)
+    target_node = he_instance.getNode(node_id)
+
     if 'float' in param_defs:
-        float_start_idx = param_defs['float'][0]['internal_id']
+        float_start_idx = param_defs['float'][0]['float_value_index']
         length = len(param_defs['float'])
 
         for i in range(len(float_value)):
@@ -74,16 +76,14 @@ def generate_model(params):
 
     if 'bool' in param_defs:
         for i in range(len(bool_value)):
-            param_name = param_defs['bool'][i]['label']
-            target_node.setParmBoolValue(param_name, bool_value[i])
+            target_node.setParmBoolValue(i, bool_value[i])
 
     if 'choice' in param_defs:
         for i in range(len(choice_value)):
-            param_name = param_defs['choice'][i]['label']
+            int_start_idx = param_defs['choice'][i]['int_value_index']
             choice_list = param_defs['choice'][i]['choices']
             choice_idx = choice_list.index(choice_value[i])
-            print('-----', param_name, choice_idx)
-            target_node.setParmIntValue(param_name, choice_idx)
+            target_node.setParmIntValues([choice_idx], int_start_idx, 1)
 
     vertices, faces = target_node.readGeometry()
 
@@ -103,12 +103,8 @@ def init_houdini(shape_type):
         print("Failed to load the HDA.")
         return False
 
-    hda_cooked = he_instance.createAndCookNode(asset_name, 0)
-    if not hda_cooked:
-        print("Failed to create and cook the HDA node.")
-        return False
-
-    return True
+    global node_id
+    node_id = he_instance.createAndCookNode(asset_name, 0)
 
 def write_data(amount, f, mode, pvd):
     param_vector = pvd.get_random_vectors(amount)
@@ -136,27 +132,6 @@ def generate_hdf5(shape_type, train_amount, test_amount):
 def main():
     generate_hdf5('table', 4096, 128)
 
-def voxelize_mesh(mesh: trimesh.Trimesh, visualize=False):
-    rsl = 64
-    pitch = 1.0 / rsl
-
-    extents = mesh.bounding_box.extents
-    scale = 1.0 / np.max(extents)
-    mesh.apply_scale(scale)
-
-    voxels = trimesh.voxel.creation.local_voxelize(mesh, (0, 0, 0), pitch=pitch, radius=rsl, fill=True)
-
-    if visualize:
-        voxels.show()
-
-    voxel_arr = np.zeros((rsl, rsl, rsl), dtype=np.uint8)
-    if len(voxels.sparse_indices) > 0:
-        indices = np.stack(voxels.sparse_indices)
-        indices = np.clip(indices, 0, rsl - 1)
-        voxel_arr[tuple(indices.T)] = 1
-
-    return torch.tensor(voxel_arr, dtype=torch.float32)
-
 def test():
     init_houdini('table')
     read_param_def('table')
@@ -164,7 +139,7 @@ def test():
     vectors = pvd.get_random_vectors(1)
     print(vectors)
     vertices, faces = generate_model(vectors[0])
-    voxelize_mesh(trimesh.Trimesh(vertices=vertices, faces=faces), visualize=True)
+    utils.voxelize_mesh(trimesh.Trimesh(vertices=vertices, faces=faces), visualize=True)
 
 if __name__ == '__main__':
-    test()
+    main()

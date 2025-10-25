@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import trimesh
 import utils
+from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler
 
@@ -15,12 +16,12 @@ class ShapeDataset(Dataset):
 
         mesh_group = self.f['msh']
         voxels = []
-        for key in range(mesh_group.__len__()):
+        for key in tqdm(range(mesh_group.__len__())):
             mesh_sub_group = mesh_group[key.__str__()]
             v = np.array(mesh_sub_group['v'])
             f = np.array(mesh_sub_group['f'])
             mesh = trimesh.Trimesh(vertices=v, faces=f)
-            voxel = utils.voxelize_mesh(mesh)
+            voxel = utils.voxelize_mesh_faster(mesh)
             voxels.append(torch.unsqueeze(voxel, dim=0))
 
         self.vxl = torch.stack(voxels, dim=0)

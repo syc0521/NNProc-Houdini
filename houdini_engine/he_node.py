@@ -14,11 +14,14 @@ class HoudiniNode:
     def setParmFloatValues(self, values_array, start, length):
         return hapi.setParmFloatValues(self.session, self.node_id, values_array, start, length)
 
-    def setParmBoolValue(self, name, value):
-        return hapi.setParmIntValue(self.session, self.node_id, name, 0, 1 if value == True else 0)
+    def setParmBoolValue(self, idx, value):
+        return self.setParmIntValues([1 if value == True else 0], idx, 1)
 
     def setParmIntValue(self, name, value):
         return hapi.setParmIntValue(self.session, self.node_id, name, 0, 1 if value == True else 0)
+
+    def setParmIntValues(self, values_array, start, length):
+        return hapi.setParmIntValues(self.session, self.node_id, values_array, start, length)
 
     def getAttributeNames(self, part_id, owner, count):
         part_info = hapi.getPartInfo(self.session, self.node_id, part_id)
@@ -99,11 +102,10 @@ class HoudiniNode:
         print("\nParameters: ")
         print("==========")
         for i in range(node_info.parmCount - 1):
-            print("  Name: ", end='')
-            print(he_utility.getString(self.session, parm_infos[i].nameSH))
-            print("  Label: ", end='')
-            print(he_utility.getString(self.session, parm_infos[i].labelSH))
-            print("  Values: (", end='')
+            #print("  Name: ", he_utility.getString(self.session, parm_infos[i].nameSH), "  id: ", parm_infos[i].id, end='')
+            # print("  Label: ", end='')
+            # print(he_utility.getString(self.session, parm_infos[i].labelSH))
+            #print("  Values: (", end='')
 
             if parm_infos[i].type == hapi.parmType.Int:
                 parm_int_count = parm_infos[i].size
@@ -152,3 +154,10 @@ class HoudiniNode:
             print(")")
 
         return True
+
+    def getOutputNodeInfo(self):
+        output_geo_count = hapi.getOutputGeoCount(self.session, self.node_id)
+        print("Output GeoCount: {}".format(output_geo_count))
+        info = hapi.getOutputGeoInfos(self.session, self.node_id, output_geo_count)
+        print('output node info: ', he_utility.getString(self.session, info[0].nameSH))
+        return info
