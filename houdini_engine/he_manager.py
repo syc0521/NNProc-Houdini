@@ -39,7 +39,7 @@ class HoudiniEngineManager(object):
         self.session_type = SessionType.InProcess
         self.named_pipe = self.DEFAULT_NAMED_PIPE
         self.tcp_port = self.DEFAULT_TCP_PORT
-        self.node_list = []
+        self.node_list = {}
 
     def startSession(self, session_type, named_pipe, tcp_port, shared_mem_name="", log_file="./he_log.txt"):
         ''' Creates a new session'''
@@ -247,7 +247,7 @@ class HoudiniEngineManager(object):
         return True
 
     def getNode(self, node_id):
-        if self.node_list[node_id]:
+        if node_id in self.node_list:
             return self.node_list[node_id]
         node = HoudiniNode(node_id, self.session)
         self.node_list[node_id] = node

@@ -8,9 +8,7 @@ import numpy as np
 import pyvista as pv
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 from model import ShapeInfo
-sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
 from proc_shape.procedure import Procedure
-import open3d as o3d
 import torch
 
 pl = pv.Plotter(off_screen=True, window_size=(256, 256))
@@ -77,13 +75,20 @@ def print_report(shape, predictions, targets):
 
 def voxelize_mesh(mesh: trimesh.Trimesh, visualize=False):
     rsl = 64
-    omesh = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(mesh.vertices), o3d.utility.Vector3iVector(mesh.faces))
-    voxels = o3d.geometry.VoxelGrid.create_from_triangle_mesh(omesh, voxel_size=(1.0 / (rsl - 1)))
+    pitch = 1.0 / rsl
+    extents = mesh.bounding_box.extents
+    scale = 1.0 / np.max(extents)
+    mesh.apply_scale(scale)
+
+    voxels = trimesh.voxel.creation.local_voxelize(mesh, (0, 0, 0), pitch=pitch, radius=rsl, fill=True)
+
     if visualize:
-        o3d.visualization.draw_geometries([voxels])
-    voxels = voxels.get_voxels()  # returns list of voxels
-    indices = np.stack(list(vx.grid_index for vx in voxels))
-    indices = indices + (np.array([rsl-1, rsl-1, rsl-1]) - np.max(indices, axis=0)) // 2
+        voxels.show()
+
     voxel_arr = np.zeros((rsl, rsl, rsl), dtype=np.uint8)
-    voxel_arr[tuple(indices.T)] = 1
+    if len(voxels.sparse_indices) > 0:
+        indices = np.stack(voxels.sparse_indices)
+        indices = np.clip(indices, 0, rsl - 1)
+        voxel_arr[tuple(indices.T)] = 1
+
     return torch.tensor(voxel_arr, dtype=torch.float32)

@@ -1,13 +1,11 @@
-﻿from proc_shape import paramvectordef
+﻿import he_init
+from proc_shape import paramvectordef
 import json, os
-import he_init
+import torch
+from model import NNProc
 from he_manager import he_instance
 import numpy as np
-import h5py
-import config_data
-from tqdm import tqdm
 import trimesh
-import torch
 
 param_defs = {}
 
@@ -16,6 +14,25 @@ def read_param_def(name):
         global param_defs
         param_defs = json.load(f)
         f.close()
+
+def init_houdini(shape_type):
+    session = he_init.create_session()
+    if session is None:
+        print("Failed to create the Houdini Engine session.")
+        return False
+
+    hda_folder = "../hdas"
+    hda_loaded, asset_name = he_instance.loadAsset(os.path.join(hda_folder, shape_type) + ".hda")
+    if not hda_loaded:
+        print("Failed to load the HDA.")
+        return False
+
+    hda_cooked = he_instance.createAndCookNode(asset_name, 0)
+    if not hda_cooked:
+        print("Failed to create and cook the HDA node.")
+        return False
+
+    return True
 
 def get_param_vector_def():
     scalar_params = []
@@ -82,7 +99,6 @@ def generate_model(params):
             param_name = param_defs['choice'][i]['label']
             choice_list = param_defs['choice'][i]['choices']
             choice_idx = choice_list.index(choice_value[i])
-            print('-----', param_name, choice_idx)
             target_node.setParmIntValue(param_name, choice_idx)
 
     vertices, faces = target_node.readGeometry()
@@ -90,51 +106,6 @@ def generate_model(params):
     vertices = np.array(vertices, dtype=np.float32).reshape(-1, 3)
     faces = np.array(faces, dtype=np.int32).reshape(-1, 3)
     return vertices, faces
-
-def init_houdini(shape_type):
-    session = he_init.create_session()
-    if session is None:
-        print("Failed to create the Houdini Engine session.")
-        return False
-
-    hda_folder = "../hdas"
-    hda_loaded, asset_name = he_instance.loadAsset(os.path.join(hda_folder, shape_type) + ".hda")
-    if not hda_loaded:
-        print("Failed to load the HDA.")
-        return False
-
-    hda_cooked = he_instance.createAndCookNode(asset_name, 0)
-    if not hda_cooked:
-        print("Failed to create and cook the HDA node.")
-        return False
-
-    return True
-
-def write_data(amount, f, mode, pvd):
-    param_vector = pvd.get_random_vectors(amount)
-    encoded = pvd.encode(param_vector)
-    subgroup = f.create_group(mode)
-    mesh_group = subgroup.create_group('msh')
-    for i in tqdm(range(amount)):  # 各モデルのメッシュを生成して保存
-        vertices, faces = generate_model(param_vector[i])
-        mesh_sub_group = mesh_group.create_group(i.__str__())
-        mesh_sub_group.create_dataset('v', data=vertices)
-        mesh_sub_group.create_dataset('f', data=faces)
-    prm_group = subgroup.create_group('prm')
-    for i in range(len(encoded)):
-        prm_group.create_dataset(i.__str__(), data=encoded[i])
-
-def generate_hdf5(shape_type, train_amount, test_amount):
-    init_houdini(shape_type)
-    read_param_def(shape_type)
-    pvd = get_param_vector_def()
-
-    with h5py.File('../dataset/table_example.hdf5', 'w') as f:
-        write_data(train_amount, f, config_data.TrainingMode.train.value, pvd)
-        write_data(test_amount, f, config_data.TrainingMode.test.value, pvd)
-
-def main():
-    generate_hdf5('table', 4096, 128)
 
 def voxelize_mesh(mesh: trimesh.Trimesh, visualize=False):
     rsl = 64
@@ -157,14 +128,36 @@ def voxelize_mesh(mesh: trimesh.Trimesh, visualize=False):
 
     return torch.tensor(voxel_arr, dtype=torch.float32)
 
-def test():
-    init_houdini('table')
-    read_param_def('table')
-    pvd = get_param_vector_def()
-    vectors = pvd.get_random_vectors(1)
-    print(vectors)
-    vertices, faces = generate_model(vectors[0])
-    voxelize_mesh(trimesh.Trimesh(vertices=vertices, faces=faces), visualize=True)
 
-if __name__ == '__main__':
-    test()
+def predict_param_from_voxel_direct(shape):
+    init_houdini(shape)
+    read_param_def(shape)
+    pvd = get_param_vector_def()
+    vectors = pvd.get_random_vectors(5)
+    vector = vectors[3]
+    vertices, faces = generate_model(vector)
+    before_mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
+    voxels = []
+    voxel = voxelize_mesh(before_mesh, visualize=False)
+    voxels.append(torch.unsqueeze(voxel, dim=0))
+    voxels = torch.stack(voxels, dim=0)
+    model = NNProc(shape)
+
+    print('Predicting parameters from voxels.')
+    model.load_state_dict(torch.load(os.path.join('../new_models', '{}_model.pt'.format(shape))))
+    model.eval()
+    param_preds_origin = model.param_dec.predict(model.voxel_enc.predict(voxels))
+    param_preds = pvd.decode(param_preds_origin)
+
+    vertices, faces = generate_model(param_preds[0])
+    after_mesh = trimesh.Trimesh(vertices=vertices, faces=faces).apply_translation([1.5, 0, 0])
+    print('before', vector)
+    print('after', param_preds[0])
+    (before_mesh + after_mesh).show()
+
+def main():
+    shape = 'table'
+    predict_param_from_voxel_direct(shape)
+
+if __name__ == "__main__":
+    main()

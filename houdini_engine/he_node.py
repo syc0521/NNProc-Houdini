@@ -36,7 +36,7 @@ class HoudiniNode:
             status = hapi.getStatus(self.session, hapi.statusType.CookState)
 
         # Get mesh geo info.
-        print("\nGetting mesh geometry info:")
+        #print("\nGetting mesh geometry info:")
         mesh_geo_info = hapi.getDisplayGeoInfo(self.session, self.node_id)
 
         # Get mesh part info.
@@ -49,7 +49,7 @@ class HoudiniNode:
             mesh_part_info.id,
             0, mesh_part_info.faceCount
         )
-        print("  Face count: {}".format(len(mesh_face_counts)))
+        #print("  Face count: {}".format(len(mesh_face_counts)))
 
         # Get mesh vertex list.
         mesh_vertex_list = hapi.getVertexList(
@@ -59,7 +59,7 @@ class HoudiniNode:
             0, mesh_part_info.vertexCount
         )
 
-        print("  Vertex count: {}".format(len(mesh_vertex_list)))
+        #print("  Vertex count: {}".format(len(mesh_vertex_list)))
 
         def _fetchPointAttrib(owner, attrib_name):
             mesh_attrib_info = hapi.getAttributeInfo(
@@ -78,8 +78,7 @@ class HoudiniNode:
                 0, mesh_attrib_info.count
             )
 
-            print("  {} attribute count: {}".format(
-                attrib_name, len(mesh_attrib_data)))
+            #print("  {} attribute count: {}".format(attrib_name, len(mesh_attrib_data)))
             return mesh_attrib_data
 
         mesh_p_attrib_info = _fetchPointAttrib(hapi.attributeOwner.Point, "P")
