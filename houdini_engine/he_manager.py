@@ -26,6 +26,7 @@ import hapi
 
 from he_typedef import SessionType, ParamType, ChoiceListType
 import he_utility
+from he_node import HoudiniNode
 
 class HoudiniEngineManager(object):
     DEFAULT_NAMED_PIPE = "hapi"
@@ -38,6 +39,7 @@ class HoudiniEngineManager(object):
         self.session_type = SessionType.InProcess
         self.named_pipe = self.DEFAULT_NAMED_PIPE
         self.tcp_port = self.DEFAULT_TCP_PORT
+        self.node_list = []
 
     def startSession(self, session_type, named_pipe, tcp_port, shared_mem_name="", log_file="./he_log.txt"):
         ''' Creates a new session'''
@@ -244,6 +246,13 @@ class HoudiniEngineManager(object):
 
         return True
 
+    def getNode(self, node_id):
+        if self.node_list[node_id]:
+            return self.node_list[node_id]
+        node = HoudiniNode(node_id, self.session)
+        self.node_list[node_id] = node
+        return node
+
     def createAndCookNode(self, operator_name, node_id):
         '''Instantiate and asynchronously cook the given node'''
 
@@ -257,18 +266,6 @@ class HoudiniEngineManager(object):
             print("Cook complete.")
 
         return True
-
-
-    def getAllParameterInfo(self, node_id):
-        node_info = hapi.getNodeInfo(self.session, node_id)
-
-        parm_infos = hapi.getParameters(
-            self.session,
-            node_id,
-            0,
-            node_info.parmCount
-        )
-        return parm_infos
 
     def getParamDetailData(self, param_info):
         ui_max = param_info.UIMax
@@ -469,80 +466,5 @@ class HoudiniEngineManager(object):
             print("  {}".format(attr_name))
 
         return True
-
-    def setParmFloatValues(self, node_id, values_array, start, length):
-        return hapi.setParmFloatValues(self.session, node_id, values_array, start, length)
-
-    def setParmBoolValue(self, node_id, name, value):
-        return hapi.setParmIntValue(self.session, node_id, name, 0, 1 if value == True else 0)
-
-    def setParmIntValue(self, node_id, name, value):
-        return hapi.setParmIntValue(self.session, node_id, name, 0, 1 if value == True else 0)
-
-    def getAttributeNames(self, node_id, part_id, owner, count):
-        part_info = hapi.getPartInfo(self.session, node_id, part_id)
-        return hapi.getAttributeNames(self.session, node_id, part_id, owner, 1)
-
-    def getAttributeInfo(self, node_id, part_id, attr_name):
-        return hapi.getAttributeInfo(self.session, node_id, part_id, attr_name, 0)
-
-    def readGeometry(self, node_id):
-        hapi.cookNode(self.session, node_id, self.cook_options)
-
-        # Check the cook status
-        status = hapi.getStatus(self.session, hapi.statusType.CookState)
-        while (status > hapi.state.Ready):
-            status = hapi.getStatus(self.session, hapi.statusType.CookState)
-
-        # Get mesh geo info.
-        print("\nGetting mesh geometry info:")
-        mesh_geo_info = hapi.getDisplayGeoInfo(self.session, node_id)
-
-        # Get mesh part info.
-        mesh_part_info = hapi.getPartInfo(self.session, mesh_geo_info.nodeId, 0)
-
-        # Get mesh face counts.
-        mesh_face_counts = hapi.getFaceCounts(
-            self.session,
-            mesh_geo_info.nodeId,
-            mesh_part_info.id,
-            0, mesh_part_info.faceCount
-        )
-        print("  Face count: {}".format(len(mesh_face_counts)))
-
-        # Get mesh vertex list.
-        mesh_vertex_list = hapi.getVertexList(
-            self.session,
-            mesh_geo_info.nodeId,
-            mesh_part_info.id,
-            0, mesh_part_info.vertexCount
-        )
-
-        print("  Vertex count: {}".format(len(mesh_vertex_list)))
-
-        def _fetchPointAttrib(owner, attrib_name):
-            mesh_attrib_info = hapi.getAttributeInfo(
-                self.session,
-                mesh_geo_info.nodeId,
-                mesh_part_info.id,
-                attrib_name, owner
-            )
-
-            mesh_attrib_data = hapi.getAttributeFloatData(
-                self.session,
-                mesh_geo_info.nodeId,
-                mesh_part_info.id,
-                attrib_name,
-                mesh_attrib_info, -1,
-                0, mesh_attrib_info.count
-            )
-
-            print("  {} attribute count: {}".format(
-                attrib_name, len(mesh_attrib_data)))
-            return mesh_attrib_data
-
-        mesh_p_attrib_info = _fetchPointAttrib(hapi.attributeOwner.Point, "P")
-
-        return mesh_p_attrib_info, mesh_vertex_list
 
 he_instance = HoudiniEngineManager()

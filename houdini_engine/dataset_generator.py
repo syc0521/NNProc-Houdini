@@ -1,7 +1,5 @@
 ﻿from proc_shape import paramvectordef
 import json, os
-import pyvista as pv
-import trimesh
 import he_init
 from he_manager import he_instance
 import numpy as np
@@ -41,7 +39,7 @@ def get_param_vector_def():
 
     return pvd
 
-def generate_model(params, asset_name):
+def generate_model(params):
     float_value = []
     int_value = []
     bool_value = []
@@ -57,6 +55,7 @@ def generate_model(params, asset_name):
         else:
             choice_value.append(param)
 
+    target_node = he_instance.getNode(0)
     if 'float' in param_defs:
         float_start_idx = param_defs['float'][0]['internal_id']
         length = len(param_defs['float'])
@@ -66,43 +65,31 @@ def generate_model(params, asset_name):
             def_max = param_defs['float'][i]['max']
             float_value[i] = def_min + float_value[i] * (def_max - def_min)
 
-        he_instance.setParmFloatValues(0, float_value, float_start_idx, length)
+        target_node.setParmFloatValues(float_value, float_start_idx, length)
 
     if 'bool' in param_defs:
         for i in range(len(bool_value)):
             param_name = param_defs['bool'][i]['label']
-            he_instance.setParmBoolValue(0, param_name, bool_value[i])
+            target_node.setParmBoolValue(param_name, bool_value[i])
 
-    hda_cooked = he_instance.createAndCookNode(asset_name, 0)
-    if not hda_cooked:
-        print("Failed to create and cook the HDA node.")
-        return
+    if 'choice' in param_defs:
+        for i in range(len(choice_value)):
+            param_name = param_defs['choice'][i]['label']
+            choice_list = param_defs['choice'][i]['choices']
+            choice_idx = choice_list.index(choice_value[i])
+            target_node.setParmIntValue(param_name, choice_idx)
 
-    points, vertexes = he_instance.readGeometry(0)
+    points, vertexes = target_node.readGeometry()
 
     points = np.array(points, dtype=np.float32).reshape(-1, 3)
     vertexes = np.array(vertexes, dtype=np.int32).reshape(-1, 3)
-    # print("Generated model with {} points and {} vertexes.".format(len(points), len(vertexes) * 3))
-    #
-    # # mesh faces
-    # faces = np.hstack(vertexes)
-    # surf = pv.PolyData(points, faces)
-    #
-    # # plot each face with a different color
-    # surf.plot(
-    #     scalars=np.arange(3),
-    #     cpos=[-1, 1, 0.5],
-    #     show_scalar_bar=False,
-    #     show_edges=True,
-    #     line_width=5,
-    # )
-
-    trimesh.Trimesh(points=points, faces=vertexes).show()
 
 def main():
     read_param_def("table")
     pvd = get_param_vector_def()
     rand_params = pvd.get_random_vectors(1)
+    print(rand_params)
+
 
     session = he_init.create_session()
     if session is None:
@@ -116,10 +103,14 @@ def main():
         print("Failed to load the HDA.")
         return
 
+    hda_cooked = he_instance.createAndCookNode(asset_name, 0)
+    if not hda_cooked:
+        print("Failed to create and cook the HDA node.")
+        return
+
     for param in rand_params:
         generate_model(param, asset_name)
 
-    print(rand_params)
 
 
 if __name__ == '__main__':

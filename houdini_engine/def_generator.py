@@ -8,18 +8,18 @@ def generate_param_def(folder, name):
         print("Failed to create the Houdini Engine session.")
         return
 
-    hda_node_id = 0
     hda_loaded, asset_name = he_instance.loadAsset(os.path.join(folder, name) + ".hda")
     if not hda_loaded:
         print("Failed to load the HDA.")
         return
 
-    hda_cooked = he_instance.createAndCookNode(asset_name, hda_node_id)
+    target_node = he_instance.getNode(0)
+    hda_cooked = he_instance.createAndCookNode(asset_name, target_node.node_id)
     if not hda_cooked:
         print("Failed to create and cook the HDA node.")
         return
 
-    all_params = he_instance.getAllParameterInfo(hda_node_id)
+    all_params = target_node.getAllParameterInfo()
     folder_param = all_params[1]
     detail_data = [he_instance.getParamDetailData(p) for p in all_params if p.parentId == folder_param.id]
     float_params = [p for p in detail_data if p['param_type'] == 4]
