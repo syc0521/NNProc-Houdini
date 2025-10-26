@@ -36,7 +36,7 @@ def generate_param_def(folder, name):
 
 def main():
     hda_folder = "../hdas"
-    hda_name = "table"
+    hda_name = "primitive"
     generate_param_def(hda_folder, hda_name)
 
 if __name__ == '__main__':

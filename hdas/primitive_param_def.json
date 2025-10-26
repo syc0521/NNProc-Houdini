@@ -1,0 +1,43 @@
+{
+    "float": [
+        {
+            "internal_id": 5,
+            "label": "length",
+            "min": 0.30000001192092896,
+            "max": 2.0,
+            "int_value_index": -1,
+            "float_value_index": 0,
+            "param_type": 4
+        },
+        {
+            "internal_id": 6,
+            "label": "width",
+            "min": 0.30000001192092896,
+            "max": 2.0,
+            "int_value_index": -1,
+            "float_value_index": 1,
+            "param_type": 4
+        },
+        {
+            "internal_id": 7,
+            "label": "height",
+            "min": 0.30000001192092896,
+            "max": 2.0,
+            "int_value_index": -1,
+            "float_value_index": 2,
+            "param_type": 4
+        }
+    ],
+    "bool": [
+        {
+            "internal_id": 8,
+            "label": "is_circle",
+            "min": 0.0,
+            "max": 10.0,
+            "int_value_index": 0,
+            "float_value_index": -1,
+            "param_type": 2
+        }
+    ],
+    "choice": []
+}

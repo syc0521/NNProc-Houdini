@@ -1,7 +1,7 @@
 ﻿from proc_shape import paramvectordef
 import json, os
-import he_init
-from he_manager import he_instance
+from houdini_engine import he_init
+from houdini_engine.he_manager import he_instance
 import numpy as np
 import h5py
 import config_data
@@ -11,39 +11,6 @@ import utils
 
 param_defs = {}
 node_id = 0
-
-def read_param_def(name):
-    with open("../hdas/{}_param_def.json".format(name), "r") as f:
-        global param_defs
-        param_defs = json.load(f)
-        f.close()
-
-def get_param_vector_def():
-    scalar_params = []
-    toggle_count = 0
-    choice_params = []
-
-    if 'float' in param_defs:
-        for param in param_defs['float']:
-            scalar_params.append([0.0, 1.0])
-
-    if 'bool' in param_defs:
-        toggle_count = toggle_count + len(param_defs['bool'])
-
-    if 'choice' in param_defs:
-        for param in param_defs['choice']:
-            if param['choices'] is not None:
-                choice_params.append(param['choices'])
-
-    pvd = paramvectordef.ParamVectorDef()
-    if len(scalar_params) > 0:
-        pvd.append_param(paramvectordef.ParamType.SCALAR, scalar_params)
-    for i in range(toggle_count):
-        pvd.append_param(paramvectordef.ParamType.BINARY, None)
-    for choice in choice_params:
-        pvd.append_param(paramvectordef.ParamType.TYPE, choice)
-
-    return pvd
 
 def generate_model(params):
     float_value = []
@@ -97,7 +64,7 @@ def init_houdini(shape_type):
         print("Failed to create the Houdini Engine session.")
         return False
 
-    hda_folder = "../hdas"
+    hda_folder = "hdas"
     hda_loaded, asset_name = he_instance.loadAsset(os.path.join(hda_folder, shape_type) + ".hda")
     if not hda_loaded:
         print("Failed to load the HDA.")
@@ -105,13 +72,14 @@ def init_houdini(shape_type):
 
     global node_id
     node_id = he_instance.createAndCookNode(asset_name, 0)
+    return True
 
 def write_data(amount, f, mode, pvd):
     param_vector = pvd.get_random_vectors(amount)
     encoded = pvd.encode(param_vector)
     subgroup = f.create_group(mode)
     mesh_group = subgroup.create_group('msh')
-    for i in tqdm(range(amount)):  # 各モデルのメッシュを生成して保存
+    for i in tqdm(range(amount)):
         vertices, faces = generate_model(param_vector[i])
         mesh_sub_group = mesh_group.create_group(i.__str__())
         mesh_sub_group.create_dataset('v', data=vertices)
@@ -122,24 +90,26 @@ def write_data(amount, f, mode, pvd):
 
 def generate_hdf5(shape_type, train_amount, test_amount):
     init_houdini(shape_type)
-    read_param_def(shape_type)
-    pvd = get_param_vector_def()
+    global param_defs
+    param_defs = utils.read_param_def(shape_type)
+    pvd = utils.get_param_vector_def(param_defs)
 
-    with h5py.File('../dataset/table_example.hdf5', 'w') as f:
+    with h5py.File('dataset/{}_example.hdf5'.format(shape_type), 'w') as f:
         write_data(train_amount, f, config_data.TrainingMode.train.value, pvd)
         write_data(test_amount, f, config_data.TrainingMode.test.value, pvd)
 
 def main():
-    generate_hdf5('table', 4096, 128)
+    generate_hdf5('primitive', 4096, 128)
 
 def test():
     init_houdini('table')
-    read_param_def('table')
-    pvd = get_param_vector_def()
+    global param_defs
+    param_defs = utils.read_param_def('table')
+    pvd = utils.get_param_vector_def(param_defs)
     vectors = pvd.get_random_vectors(1)
     print(vectors)
     vertices, faces = generate_model(vectors[0])
-    utils.voxelize_mesh(trimesh.Trimesh(vertices=vertices, faces=faces), visualize=True)
+    utils.voxelize_mesh_faster(trimesh.Trimesh(vertices=vertices, faces=faces), visualize=True)
 
 if __name__ == '__main__':
     main()

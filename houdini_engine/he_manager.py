@@ -24,9 +24,9 @@
 
 import hapi
 
-from he_typedef import SessionType, ParamType, ChoiceListType
-import he_utility
-from he_node import HoudiniNode
+from houdini_engine.he_typedef import SessionType, ParamType, ChoiceListType
+from houdini_engine import he_utility
+from houdini_engine.he_node import HoudiniNode
 
 class HoudiniEngineManager(object):
     DEFAULT_NAMED_PIPE = "hapi"

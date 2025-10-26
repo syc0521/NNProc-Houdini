@@ -11,7 +11,6 @@ import open3d as o3d
 from model import NNProc
 from utils import get_proc_meshes, render
 sys.path.insert(0, os.path.join('/', 'mnt', 'Research', 'Codebase', 'DatasetMaker'))
-from proc_shape.procedure import Procedure
 from applications import print_chamfer_distance
 
 

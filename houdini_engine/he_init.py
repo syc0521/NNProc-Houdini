@@ -5,7 +5,7 @@ os.add_dll_directory(os.path.join(hfs, 'bin'))
 os.add_dll_directory(os.path.join(hfs, 'houdini\python3.11libs'))
 sys.path.append(path)
 
-from he_manager import he_instance, SessionType
+from houdini_engine.he_manager import he_instance, SessionType
 
 def create_session():
     session_type = SessionType.InProcess.value

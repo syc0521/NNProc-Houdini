@@ -1,5 +1,5 @@
 ﻿import hapi
-import he_utility
+import houdini_engine.he_utility
 
 # Houdini Node C++ API
 class HoudiniNode:

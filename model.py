@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import utils
 
 z_dim = 128
 
@@ -72,34 +73,17 @@ class ParamInfo:
 class ShapeInfo:
     def __init__(self, shape):
         self.params = []
-        self.shape = shape
-        if shape == 'bed':
-            self.params.append(ParamInfo('scalar', 5))
-            self.params.append(ParamInfo('type', 3))
-            self.params.append(ParamInfo('integer', 3))
-        elif shape == 'chair':
-            self.params.append(ParamInfo('scalar', 3))
-            self.params.append(ParamInfo('type', 4))
-            self.params.append(ParamInfo('type', 4))
-            self.params.append(ParamInfo('type', 4))
-        elif shape == 'shelf':
-            self.params.append(ParamInfo('scalar', 3))
-            self.params.append(ParamInfo('integer', 5))
-            self.params.append(ParamInfo('integer', 5))
-            self.params.append(ParamInfo('binary', 1))
-            self.params.append(ParamInfo('binary', 1))
-            self.params.append(ParamInfo('binary', 1))
+        param_defs = utils.read_param_def(shape)
 
-        elif shape == 'table':
-            self.params.append(ParamInfo('scalar', 4))
-            self.params.append(ParamInfo('binary', 1))
-            self.params.append(ParamInfo('type', 6))
+        if 'float' in param_defs:
+            self.params.append(ParamInfo('scalar', len(param_defs['float'])))
 
-        elif shape == 'sofa':
-            self.params.append(ParamInfo('scalar', 9))
-            self.params.append(ParamInfo('integer', 3))
-            self.params.append(ParamInfo('integer', 3))
-            self.params.append(ParamInfo('integer', 3))
+        if 'bool' in param_defs:
+            self.params.append(ParamInfo('binary', len(param_defs['bool'])))
+
+        if 'choice' in param_defs:
+            for param in param_defs['choice']:
+                self.params.append(ParamInfo('type', len(param['choices'])))
 
 
 class ParamEncoder(nn.Module):

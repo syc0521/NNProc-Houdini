@@ -1,9 +1,9 @@
-﻿import he_init
+﻿from houdini_engine import he_init
 from proc_shape import paramvectordef
 import json, os
 import torch
 from model import NNProc
-from he_manager import he_instance
+from houdini_engine.he_manager import he_instance
 import numpy as np
 import trimesh
 import utils
@@ -11,7 +11,7 @@ import utils
 param_defs = {}
 
 def read_param_def(name):
-    with open("../hdas/{}_param_def.json".format(name), "r") as f:
+    with open("hdas/{}_param_def.json".format(name), "r") as f:
         global param_defs
         param_defs = json.load(f)
         f.close()
@@ -22,7 +22,7 @@ def init_houdini(shape_type):
         print("Failed to create the Houdini Engine session.")
         return False
 
-    hda_folder = "../hdas"
+    hda_folder = "hdas"
     hda_loaded, asset_name = he_instance.loadAsset(os.path.join(hda_folder, shape_type) + ".hda")
     if not hda_loaded:
         print("Failed to load the HDA.")
@@ -111,13 +111,13 @@ def predict_param_from_voxel_direct(shape):
     vertices, faces = generate_model(vectors[0])
     before_mesh = trimesh.Trimesh(vertices=vertices, faces=faces)
     voxels = []
-    voxel = utils.voxelize_mesh(before_mesh, visualize=False)
+    voxel = utils.voxelize_mesh_faster(before_mesh, visualize=False)
     voxels.append(torch.unsqueeze(voxel, dim=0))
     voxels = torch.stack(voxels, dim=0)
     model = NNProc(shape)
 
     print('Predicting parameters from voxels.')
-    model.load_state_dict(torch.load(os.path.join('../new_models', '{}_model.pt'.format(shape))))
+    model.load_state_dict(torch.load(os.path.join('new_models', '{}_model.pt'.format(shape))))
     model.eval()
     param_preds_origin = model.param_dec.predict(model.voxel_enc.predict(voxels))
     param_preds = pvd.decode(param_preds_origin)

@@ -6,6 +6,16 @@ import utils
 from tqdm import tqdm
 from torch.utils.data import Dataset, DataLoader
 from torch.utils.data.sampler import SequentialSampler, SubsetRandomSampler
+import multiprocessing as mp
+
+meshes = []
+
+def convert_mesh(mesh_sub_group):
+    v = np.array(mesh_sub_group['v'])
+    f = np.array(mesh_sub_group['f'])
+    mesh = trimesh.Trimesh(vertices=v, faces=f)
+    voxel = utils.voxelize_mesh_faster(mesh)
+    return torch.unsqueeze(voxel, dim=0)
 
 class ShapeDataset(Dataset):
     def __init__(self, data_file, mode='train'):
@@ -15,14 +25,22 @@ class ShapeDataset(Dataset):
         self.mode = mode
 
         mesh_group = self.f['msh']
-        voxels = []
         for key in tqdm(range(mesh_group.__len__())):
             mesh_sub_group = mesh_group[key.__str__()]
-            v = np.array(mesh_sub_group['v'])
-            f = np.array(mesh_sub_group['f'])
-            mesh = trimesh.Trimesh(vertices=v, faces=f)
-            voxel = utils.voxelize_mesh_faster(mesh)
-            voxels.append(torch.unsqueeze(voxel, dim=0))
+            meshes.append({'v': np.array(mesh_sub_group['v']),
+                           'f': np.array(mesh_sub_group['f'])})
+
+        # voxels = []
+        # for mesh in tqdm(meshes):
+        #     m = trimesh.Trimesh(vertices=mesh['v'], faces=mesh['f'])
+        #     vxl = utils.voxelize_mesh_faster(m)
+        #     voxels.append(torch.unsqueeze(vxl, dim=0))
+
+        pool = mp.Pool(mp.cpu_count())
+        print(mp.cpu_count(), len(meshes))
+        voxels = list(tqdm(pool.imap(convert_mesh, meshes), total=len(meshes)))
+        pool.close()
+        pool.join()
 
         self.vxl = torch.stack(voxels, dim=0)
         self.mesh_shape = self.vxl.shape[1:]

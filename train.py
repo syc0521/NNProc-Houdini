@@ -30,7 +30,7 @@ def run_epoch(data_loader, model, loss_fn, optim, scheduler, do_backward=False):
 
 
 def optimize_model(shape):
-    data_file = 'dataset/table_example.hdf5'
+    data_file = 'dataset/{}_example.hdf5'.format(shape)
     train_loader, valid_loader = ShapeDataset(data_file).get_data_loader(batch_size=config_data.batch_size)
     model = NNProc(shape)
     if os.path.exists(os.path.join('new_models', shape + '_model.pt')):
@@ -61,5 +61,5 @@ def optimize_model(shape):
 
 if __name__ == "__main__":
     #for shape in ['bed', 'chair', 'shelf', 'sofa']:
-    for shape in ['table']:
+    for shape in ['primitive']:
         optimize_model(shape)

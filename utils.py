@@ -6,8 +6,8 @@ from trimesh import transformations
 import numpy as np
 import pyvista as pv
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from model import ShapeInfo
 import torch
+import json
 
 pl = pv.Plotter(off_screen=True, window_size=(256, 256))
 
@@ -61,6 +61,7 @@ def evaluate_discrete(y, y_pred):
     print()
 
 def print_report(shape, predictions, targets):
+    from model import ShapeInfo
     shape_info = ShapeInfo(shape=shape)
     for i, param in enumerate(shape_info.params):
         y = targets[i]
@@ -72,36 +73,63 @@ def print_report(shape, predictions, targets):
         else:
             evaluate_discrete(y, np.round(y_pred))
 
-def voxelize_mesh(mesh: trimesh.Trimesh, visualize=False):
-    rsl = 64
-    pitch = 1.0 / rsl
-    extents = mesh.bounding_box.extents
-    scale = 1.0 / np.max(extents)
-    mesh.apply_scale(scale)
-
-    voxels = trimesh.voxel.creation.local_voxelize(mesh, (0, 0, 0), pitch=pitch, radius=rsl, fill=True)
-
-    if visualize:
-        voxels.show()
-
-    voxel_arr = np.zeros((rsl, rsl, rsl), dtype=np.uint8)
-    if len(voxels.sparse_indices) > 0:
-        indices = np.stack(voxels.sparse_indices)
-        indices = np.clip(indices, 0, rsl - 1)
-        voxel_arr[tuple(indices.T)] = 1
-
-    return torch.tensor(voxel_arr, dtype=torch.float32)
-
 def voxelize_mesh_faster(mesh: trimesh.Trimesh, visualize=False):
     import open3d as o3d
     rsl = 64
+
+    vertices = np.asarray(mesh.vertices)
+    # calculate bounding box
+    min_bound = vertices.min(axis=0)
+    max_bound = vertices.max(axis=0)
+    # calculate scale
+    scale = 1.0 / np.max(max_bound - min_bound)
+
+    mesh.vertices = o3d.utility.Vector3dVector((vertices - min_bound) * scale)
     omesh = o3d.geometry.TriangleMesh(o3d.utility.Vector3dVector(mesh.vertices), o3d.utility.Vector3iVector(mesh.faces))
-    voxels = o3d.geometry.VoxelGrid.create_from_triangle_mesh(omesh, voxel_size=(1.0 / (rsl - 1)))
+    voxel_grid = o3d.geometry.VoxelGrid.create_from_triangle_mesh(
+        omesh,
+        voxel_size=1 / 63
+    )
     if visualize:
-        o3d.visualization.draw_geometries([voxels])
-    voxels = voxels.get_voxels()  # returns list of voxels
+        o3d.visualization.draw_geometries([voxel_grid])
+    voxels = voxel_grid.get_voxels()  # returns list of voxels
     indices = np.stack(list(vx.grid_index for vx in voxels))
     indices = indices + (np.array([rsl-1, rsl-1, rsl-1]) - np.max(indices, axis=0)) // 2
     voxel_arr = np.zeros((rsl, rsl, rsl), dtype=np.uint8)
     voxel_arr[tuple(indices.T)] = 1
     return torch.tensor(voxel_arr, dtype=torch.float32)
+
+def read_param_def(name):
+    param_defs = {}
+    with open("hdas/{}_param_def.json".format(name), "r") as f:
+        param_defs = json.load(f)
+        f.close()
+    return param_defs
+
+def get_param_vector_def(param_defs):
+    scalar_params = []
+    toggle_count = 0
+    choice_params = []
+
+    if 'float' in param_defs:
+        for param in param_defs['float']:
+            scalar_params.append([0.0, 1.0])
+
+    if 'bool' in param_defs:
+        toggle_count = toggle_count + len(param_defs['bool'])
+
+    if 'choice' in param_defs:
+        for param in param_defs['choice']:
+            if param['choices'] is not None:
+                choice_params.append(param['choices'])
+
+    from proc_shape import paramvectordef
+    pvd = paramvectordef.ParamVectorDef()
+    if len(scalar_params) > 0:
+        pvd.append_param(paramvectordef.ParamType.SCALAR, scalar_params)
+    for i in range(toggle_count):
+        pvd.append_param(paramvectordef.ParamType.BINARY, None)
+    for choice in choice_params:
+        pvd.append_param(paramvectordef.ParamType.TYPE, choice)
+
+    return pvd
