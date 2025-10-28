@@ -97,6 +97,7 @@ def voxelize_mesh_faster(mesh: trimesh.Trimesh, visualize=False):
     indices = indices + (np.array([rsl-1, rsl-1, rsl-1]) - np.max(indices, axis=0)) // 2
     voxel_arr = np.zeros((rsl, rsl, rsl), dtype=np.uint8)
     voxel_arr[tuple(indices.T)] = 1
+    del o3d
     return torch.tensor(voxel_arr, dtype=torch.float32)
 
 def read_param_def(name):
